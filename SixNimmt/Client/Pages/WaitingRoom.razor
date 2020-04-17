@@ -1,0 +1,99 @@
+﻿@page "/WaitingRoom/{GameId}"
+
+@using Microsoft.AspNetCore.SignalR.Client
+
+@inject HttpClient Http
+@inject LocalStorage Storage
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<h3>Host Game</h3>
+
+@if (_game == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row w-100">
+        <table class="table table-striped table-bordered col-4">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Player Name</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (var i = 0; i < _game.Players.Count; i++)
+                {
+                    <tr>
+                        <td class="align-middle">@(i + 1)</td>
+                        <td><input class="form-control" type="text" value="@_game.Players[i].Name" disabled="@(_game.Players[i].Name != _player.Name)" /></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string GameId { get; set; }
+
+    private HubConnection _hubConnection;
+
+    private Game _game;
+    private Player _player;
+    private bool _render;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ConfigureHubAsync();
+        _game = JsonConvert.DeserializeObject<Game>(await Http.GetStringAsync($"api/Game/Get?id={GameId}"));
+        if (_game == null)
+        {
+            await Http.PutJsonAsync("api/Game/New", GameId);
+            _game = JsonConvert.DeserializeObject<Game>(await Http.GetStringAsync($"api/Game/Get?id={GameId}"));
+            _player = _game.Players.Single();
+        }
+        else
+        {
+            var playerName = Storage.GetItem("playerName");
+            if (playerName == null)
+            {
+                await JoinGameAsync();
+            }
+            else
+            {
+                _player = _game.Players.SingleOrDefault(p => p.Name == playerName);
+                if (_player == null)
+                {
+                    Storage.RemoveItem("playerName");
+                    await JoinGameAsync();
+                }
+            }
+        }
+
+        Storage.SetItem("playerName", _player.Name);
+    }
+
+    private async Task ConfigureHubAsync()
+    {
+        _hubConnection = new HubConnectionBuilder().WithUrl(NavigationManager.ToAbsoluteUri("/GameHub")).WithAutomaticReconnect().Build();
+        _hubConnection.On<string>("UpdateGame", updatedGame =>
+        {
+            _game = JsonConvert.DeserializeObject<Game>(updatedGame);
+            StateHasChanged();
+        });
+        await _hubConnection.StartAsync();
+        await _hubConnection.InvokeAsync("AddToGroupAsync", GameId);
+    }
+
+
+    private async Task JoinGameAsync()
+    {
+        _player = await Http.PostJsonAsync<Player>($"api/Game/Join", GameId);
+        _game.Players.Add(_player);
+        await _hubConnection.InvokeAsync("UpdateGameAsync", GameId, JsonConvert.SerializeObject(_game));
+    }
+}

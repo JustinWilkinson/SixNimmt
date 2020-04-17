@@ -15,6 +15,8 @@ namespace SixNimmt.Server.Repository
         Game GetGame(string id);
 
         IEnumerable<Game> ListGames();
+
+        void DeleteGame(string id);
     }
 
     public class GameRepository : Repository, IGameRepository
@@ -48,5 +50,12 @@ namespace SixNimmt.Server.Repository
         }
 
         public IEnumerable<Game> ListGames() => Execute("SELECT * FROM Games", DeserializeColumn<Game>("GameJson"));
+
+        public void DeleteGame(string id)
+        {
+            var command = new SQLiteCommand("DELETE FROM Games WHERE Id = @Id");
+            command.AddParameter("@Id", id);
+            Execute(command);
+        }
     }
 }

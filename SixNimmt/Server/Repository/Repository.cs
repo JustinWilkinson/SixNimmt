@@ -65,9 +65,6 @@ namespace SixNimmt.Server.Repository
             }
         }
 
-        public Func<SQLiteDataReader, T> DeserializeColumn<T>(string columnName)
-        {
-            return reader => reader[columnName].ToString().Deserialize<T>();
-        }
+        public Func<SQLiteDataReader, T> DeserializeColumn<T>(string columnName) => reader => reader[columnName].ToString().Deserialize<T>();
     }
 }
