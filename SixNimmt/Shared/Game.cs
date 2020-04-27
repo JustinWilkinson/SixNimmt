@@ -20,7 +20,7 @@ namespace SixNimmt.Shared
             deck.Deal(Players);
 
             CardRows = new Card[rows, columns];
-            for (var i = 0; i < CardRows.Rank; i++)
+            for (var i = 0; i < CardRows.GetLength(0); i++)
             {
                 CardRows[i, 0] = deck.TopCard();
             }

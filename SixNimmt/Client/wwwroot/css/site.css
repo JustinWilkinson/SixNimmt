@@ -130,32 +130,58 @@ app {
     top: 0.5rem;
 }
 
-@media (max-width: 767.98px) {
-    .main .top-row:not(.auth) {
-        display: none;
-    }
+app {
+    flex-direction: row;
+}
 
-    .main .top-row.auth {
-        justify-content: space-between;
-    }
+.main .top-row {
+    position: sticky;
+    top: 0;
+}
 
-    .main .top-row a, .main .top-row .btn-link {
-        margin-left: 0;
+.main > div {
+    padding-left: 2rem !important;
+    padding-right: 1.5rem !important;
+}
+
+
+html, body {
+    font-size: 6px;
+}
+
+.player-hand {
+    height: 18vh;
+    overflow-y: auto;
+}
+
+@media (min-height: 320px) and (min-width: 480px) {
+    html, body {
+        font-size: 8px;
     }
 }
 
-@media (min-width: 768px) {
-    app {
-        flex-direction: row;
+@media (min-height: 440px) and (min-width: 720px)  {
+    html, body {
+        font-size: 10px;
     }
+}
 
-    .main .top-row {
-        position: sticky;
-        top: 0;
+@media (min-height: 560px) and (min-width: 1080px) {
+    html, body {
+        font-size: 12px;
     }
+}
 
-    .main > div {
-        padding-left: 2rem !important;
-        padding-right: 1.5rem !important;
+
+@media (min-height: 680px) and (min-width: 1200px) {
+    html, body {
+        font-size: 14px;
+    }
+}
+
+
+@media (min-height: 800px) and (min-width: 1440px) {
+    html, body {
+        font-size: 16px;
     }
 }
