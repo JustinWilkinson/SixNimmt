@@ -6,7 +6,6 @@ using SixNimmt.Shared;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
 
 namespace SixNimmt.Server.Controllers
@@ -46,11 +45,13 @@ namespace SixNimmt.Server.Controllers
         [HttpPost("UpdatePlayer")]
         public void UpdatePlayer(JsonElement json)
         {
-            var gameId = json.GetStringProperty("GameId");
-            lock (_locks.GetOrAdd(gameId, new object()))
-            {
-                _gameRepository.UpdatePlayerName(gameId, json.GetStringProperty("OldName"), json.GetStringProperty("NewName"));
-            }
+            _gameRepository.UpdatePlayerName(json.GetStringProperty("GameId"), json.GetStringProperty("OldName"), json.GetStringProperty("NewName"));
+        }
+
+        [HttpPost("SelectCard")]
+        public void SelectCard(JsonElement json)
+        {
+            _gameRepository.SelectCard(json.GetStringProperty("GameId"), json.GetStringProperty("PlayerName"), json.DeserializeStringProperty<Card>("Card"));
         }
 
         [HttpGet("Get")]
@@ -60,31 +61,14 @@ namespace SixNimmt.Server.Controllers
         public string List() => _gameRepository.ListGames().Serialize();
 
         [HttpPost("Save")]
-        public void Save(JsonElement gameJson)
-        {
-            var game = gameJson.Deserialize<Game>();
-            lock (_locks.GetOrAdd(game.Id.ToString(), new object()))
-            {
-                _gameRepository.SaveGame(gameJson.Deserialize<Game>());
-            }
-        }
+        public void Save(JsonElement gameJson) => _gameRepository.SaveGame(gameJson.Deserialize<Game>());
 
         [HttpPost("StartGame")]
         public void StartGame(JsonElement gameJson)
         {
             var game = gameJson.Deserialize<Game>();
-            lock (_locks.GetOrAdd(game.Id.ToString(), new object()))
-            {
-                game.StartGame();
-                _gameRepository.SaveGame(game);
-            }
-        }
-
-        [HttpDelete("Delete")]
-        public void Delete(string gameId)
-        {
-            _locks.TryRemove(gameId, out _);
-            _gameRepository.DeleteGame(gameId);
+            game.StartGame();
+            _gameRepository.SaveGame(game);
         }
     }
 }

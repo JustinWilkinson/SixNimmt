@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.SignalR;
+using SixNimmt.Shared;
 using System.Threading.Tasks;
 
 namespace Codenames.Server.Hubs
@@ -12,6 +13,8 @@ namespace Codenames.Server.Hubs
         Task UpdatePlayerNameAsync(string gameId, string oldName, string newName);
 
         Task StartGameAsync(string gameId);
+
+        Task PlayerSelectedCardAsync(string gameId, string playerName, Card card);
     }
 
     public class GameHub : Hub, IGameHub
@@ -23,5 +26,7 @@ namespace Codenames.Server.Hubs
         public async Task UpdatePlayerNameAsync(string gameId, string oldName, string newName) => await Clients.OthersInGroup(gameId).SendAsync("PlayerNameChanged", oldName, newName);
 
         public async Task StartGameAsync(string gameId) => await Clients.OthersInGroup(gameId).SendAsync("GameStarted");
+
+        public async Task PlayerSelectedCardAsync(string gameId, string playerName, Card card) => await Clients.OthersInGroup(gameId).SendAsync("PlayerSelectedCard", playerName, card);
     }
 }

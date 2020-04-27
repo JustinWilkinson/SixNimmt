@@ -10,6 +10,8 @@ namespace SixNimmt.Shared
 
         public List<Card> Hand { get; set; }
 
+        public Card SelectedCard { get; set; }
+
         public bool IsHost { get; set; }
     }
 }

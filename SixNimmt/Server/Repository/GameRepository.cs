@@ -20,7 +20,7 @@ namespace SixNimmt.Server.Repository
 
         IEnumerable<Game> ListGames();
 
-        void DeleteGame(string id);
+        void SelectCard(string gameId, string playerName, Card card);
     }
 
     public class GameRepository : Repository, IGameRepository
@@ -64,24 +64,9 @@ namespace SixNimmt.Server.Repository
             }
         }
 
-        public void UpdatePlayerName(string gameId, string oldName, string newName)
-        {
-            ExecuteInTransaction((connection) =>
-            {
-                var selectCommand = new SQLiteCommand("SELECT GameJson FROM Games WHERE Id = @Id;", connection);
-                selectCommand.AddParameter("@Id", gameId);
-                using var reader = selectCommand.ExecuteReader();
-                if (reader.Read())
-                {
-                    var game = DeserializeColumn<Game>("GameJson")(reader);
-                    game.Players.Single(p => p.Name == oldName).Name = newName;
-                    var updateCommand = new SQLiteCommand("UPDATE Games SET GameJson = @Json WHERE Id = @Id", connection);
-                    updateCommand.AddParameter("@Id", game.Id);
-                    updateCommand.AddParameter("@Json", game.Serialize());
-                    updateCommand.ExecuteNonQuery();
-                }
-            });
-        }
+        public void UpdatePlayerName(string gameId, string oldName, string newName) => ModifyGame(gameId, game => game.Players.Single(p => p.Name == oldName).Name = newName);
+
+        public void SelectCard(string gameId, string playerName, Card card) => ModifyGame(gameId, game => game.Players.Single(p => p.Name == playerName).SelectedCard = card);
 
         public Game GetGame(string id)
         {
@@ -111,19 +96,24 @@ namespace SixNimmt.Server.Repository
             }
         }
 
-        public void DeleteGame(string id)
+
+        private void ModifyGame(string gameId, Action<Game> action)
         {
-            try
+            ExecuteInTransaction((connection) =>
             {
-                var command = new SQLiteCommand("DELETE FROM Games WHERE Id = @Id");
-                command.AddParameter("@Id", id);
-                Execute(command);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"An error occurred deleting game {id}.");
-                throw;
-            }
+                var selectCommand = new SQLiteCommand("SELECT GameJson FROM Games WHERE Id = @Id;", connection);
+                selectCommand.AddParameter("@Id", gameId);
+                using var reader = selectCommand.ExecuteReader();
+                if (reader.Read())
+                {
+                    var game = DeserializeColumn<Game>("GameJson")(reader);
+                    action(game);
+                    var updateCommand = new SQLiteCommand("UPDATE Games SET GameJson = @Json WHERE Id = @Id", connection);
+                    updateCommand.AddParameter("@Id", game.Id);
+                    updateCommand.AddParameter("@Json", game.Serialize());
+                    updateCommand.ExecuteNonQuery();
+                }
+            });
         }
     }
 }

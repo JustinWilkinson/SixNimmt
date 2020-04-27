@@ -7,10 +7,14 @@
 @inject NavigationManager NavigationManager
 
 <h3>Waiting Room</h3>
-<p>You can edit your player name using the input box in the table.</p>
+<p>Distribute this URL to any players. You can edit your player name using the input box in the table.</p>
 @if (_game == null)
 {
     <p><em>Loading...</em></p>
+}
+else if (_game.Started)
+{
+<p>Sorry, this game has been started by the host! Click here to host a new game. Click <NavLink href="@($"WaitingRoom/{Guid.NewGuid().ToString()}")" Match="NavLinkMatch.All">here</NavLink> to host a new game</p>
 }
 else
 {
@@ -70,6 +74,10 @@ else
             await Http.PutJsonAsync("api/Game/New", GameId);
             _game = JsonConvert.DeserializeObject<Game>(await Http.GetStringAsync($"api/Game/Get?id={GameId}"));
             _player = _game.Players.Single();
+        }
+        else if (_game.Started)
+        {
+            return;
         }
         else
         {

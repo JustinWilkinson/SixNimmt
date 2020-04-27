@@ -79,10 +79,10 @@ else
             <div class="col-2 col-md-1">
                 <h5 class="mb-0">Your Hand:</h5>
             </div>
-            <div class="row col-11 bg-primary justify-content-center h-100">
+            <div class="row col-11 bg-primary justify-content-center h-100 dropzone" ondragover="event.preventDefault();">
                 @foreach (var card in IdentifiedPlayer.Hand)
                 {
-                    <div class="col-2 col-md-1 h-100">
+                    <div class="col-2 col-md-1 h-100" draggable="true" @ondragstart="() => StartDragCard(card)" @ondrop="() => DropCard(card)">
                         <div class="card border rounded h-100 bg-light">
                             <div class="card-header text-right">
                                 @card.Points
@@ -94,10 +94,22 @@ else
                     </div>
                 }
                 <div class="col-2 col-md-1 h-100 ml-auto mr-auto">
-                    <div class="card border-success rounded h-100 bg-light">
-                        <div class="row card-body text-center align-items-center">
-                            <span class="text-muted">Drag Your Selection Here</span>
-                        </div>
+                    <div class="card border-success rounded h-100 bg-light dropzone" ondragover="event.preventDefault();" draggable="@(IdentifiedPlayer.SelectedCard != null ? "true" : "false")" @ondragstart="() => StartDragCard(IdentifiedPlayer.SelectedCard)" @ondrop="() => SelectCard()">
+                        @if (IdentifiedPlayer.SelectedCard == null)
+                        {
+                            <div class="row card-body text-center align-items-center">
+                                <span class="text-muted">Drag Your Selection Here</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="card-header text-right">
+                                @IdentifiedPlayer.SelectedCard.Points
+                            </div>
+                            <div class="row card-body text-center align-items-center">
+                                <h2 class="col mb-0 font-weight-bold">@IdentifiedPlayer.SelectedCard.Value</h2>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
@@ -114,7 +126,7 @@ else
 
     private bool _urlWrong = false;
     private HubConnection _hubConnection;
-
+    private int _draggedCardIndex;
 
     protected override async Task OnInitializedAsync()
     {
@@ -143,7 +155,65 @@ else
             Game = JsonConvert.DeserializeObject<Game>(updatedGame);
             StateHasChanged();
         });
+        _hubConnection.On<string, Card>("PlayerSelectedCard", (playerName, card) =>
+        {
+            Game.Players.Single(p => p.Name == playerName).SelectedCard = card;
+            StateHasChanged();
+        });
         await _hubConnection.StartAsync();
         await _hubConnection.InvokeAsync("AddToGroupAsync", GameId);
+    }
+
+    private void StartDragCard(Card card) => _draggedCardIndex = IdentifiedPlayer.Hand.FindIndex(c => c.Value == card.Value);
+
+    private void DropCard(Card card)
+    {
+        var newIndex = IdentifiedPlayer.Hand.FindIndex(c => c.Value == card.Value);
+
+        Card draggedCard;
+        if (_draggedCardIndex > 0)
+        {
+            draggedCard = IdentifiedPlayer.Hand[_draggedCardIndex];
+            IdentifiedPlayer.Hand.RemoveAt(_draggedCardIndex);
+        }
+        else
+        {
+            draggedCard = IdentifiedPlayer.SelectedCard;
+            IdentifiedPlayer.SelectedCard = null;
+        }
+
+        AddToHand(newIndex, draggedCard);
+    }
+
+    private async Task SelectCard()
+    {
+        if (IdentifiedPlayer.SelectedCard == null)
+        {
+            IdentifiedPlayer.SelectedCard = IdentifiedPlayer.Hand[_draggedCardIndex];
+            IdentifiedPlayer.Hand.RemoveAt(_draggedCardIndex);
+        }
+        else
+        {
+            var oldSelectedCard = IdentifiedPlayer.SelectedCard;
+            IdentifiedPlayer.SelectedCard = IdentifiedPlayer.Hand[_draggedCardIndex];
+            IdentifiedPlayer.Hand.RemoveAt(_draggedCardIndex);
+            AddToHand(_draggedCardIndex, oldSelectedCard);
+        }
+
+        await Task.WhenAll(
+            Http.PostJsonAsync("api/Game/SelectCard", new { GameId = GameId, PlayerName = IdentifiedPlayer.Name, Card = JsonConvert.SerializeObject(IdentifiedPlayer.SelectedCard) }),
+            _hubConnection.InvokeAsync("PlayerSelectedCardAsync", GameId, IdentifiedPlayer.Name, IdentifiedPlayer.SelectedCard));
+    }
+
+    private void AddToHand(int index, Card card)
+    {
+        if (IdentifiedPlayer.Hand.Count > index)
+        {
+            IdentifiedPlayer.Hand.Insert(index, card);
+        }
+        else
+        {
+            IdentifiedPlayer.Hand.Add(card);
+        }
     }
 }

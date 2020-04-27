@@ -5,6 +5,7 @@ namespace SixNimmt.Shared
 {
     public class Deck
     {
+        private static readonly Random _random = new Random();
         private readonly List<Card> _cards = new List<Card>();
 
         public Deck(int cardCount = 104)
@@ -31,15 +32,13 @@ namespace SixNimmt.Shared
 
         public void Shuffle()
         {
-            Random rng = new Random();
-
-            for (var i = 0; i < 5; i++)
+            for (var i = 0; i < 20; i++)
             {
                 var unshuffledCount = _cards.Count;
                 while (unshuffledCount > 1)
                 {
                     unshuffledCount--;
-                    var newPosition = rng.Next(unshuffledCount + 1);
+                    var newPosition = _random.Next(unshuffledCount + 1);
                     Card value = _cards[newPosition];
                     _cards[newPosition] = _cards[unshuffledCount];
                     _cards[unshuffledCount] = value;

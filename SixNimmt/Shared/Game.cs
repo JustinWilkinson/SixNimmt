@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace SixNimmt.Shared
 {
@@ -18,6 +19,7 @@ namespace SixNimmt.Shared
             var deck = new Deck();
             deck.Shuffle();
             deck.Deal(Players);
+            Players.ForEach(x => x.Hand.Sort((c1, c2) => c1.Value.CompareTo(c2.Value)));
 
             CardRows = new Card[rows, columns];
             for (var i = 0; i < CardRows.GetLength(0); i++)
