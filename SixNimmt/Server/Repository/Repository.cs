@@ -1,6 +1,7 @@
 ﻿using SixNimmt.Server.Extensions;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SQLite;
 using System.IO;
 
@@ -65,6 +66,24 @@ namespace SixNimmt.Server.Repository
             }
         }
 
+        protected void ExecuteInTransaction(Action<SQLiteConnection> action)
+        {
+            using var connection = GetOpenConnection();
+            var transaction = connection.BeginTransaction(IsolationLevel.Serializable);
+            try
+            {
+                action(connection);
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+
         public Func<SQLiteDataReader, T> DeserializeColumn<T>(string columnName) => reader => reader[columnName].ToString().Deserialize<T>();
+
+        public Func<SQLiteDataReader, T> GetColumnValue<T>(string columnName, Func<object, T> converter) => reader => converter(reader[columnName]);
     }
 }

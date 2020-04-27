@@ -7,6 +7,8 @@ namespace SixNimmt.Shared
     {
         public Guid Id { get; set; }
 
+        public bool Started { get; set; }
+
         public List<Player> Players { get; set; }
 
         public Card[,] CardRows { get; set; }
@@ -22,6 +24,8 @@ namespace SixNimmt.Shared
             {
                 CardRows[i, 0] = deck.TopCard();
             }
+
+            Started = true;
         }
     }
 }
