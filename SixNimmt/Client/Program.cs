@@ -1,6 +1,8 @@
+using Cloudcrate.AspNetCore.Blazor.Browser.Storage;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using System.Threading.Tasks;
+using Toolbelt.Blazor.Extensions.DependencyInjection;
 
 namespace SixNimmt.Client
 {
@@ -12,8 +14,9 @@ namespace SixNimmt.Client
             builder.RootComponents.Add<App>("app");
 
             builder.Services.AddBaseAddressHttpClient();
+            builder.Services.AddStorage();
 
-            await builder.Build().RunAsync();
+            await builder.Build().UseLocalTimeZone().RunAsync();
         }
     }
 }

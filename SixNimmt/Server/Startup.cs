@@ -1,8 +1,10 @@
+using Codenames.Server.Hubs;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using SixNimmt.Server.Repository;
 
 namespace SixNimmt.Server
 {
@@ -25,6 +27,8 @@ namespace SixNimmt.Server
                 options.JsonSerializerOptions.PropertyNamingPolicy = null;
             });
             services.AddSignalR();
+
+            services.AddSingleton<IGameRepository, GameRepository>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -52,6 +56,7 @@ namespace SixNimmt.Server
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+                endpoints.MapHub<GameHub>("/GameHub");
                 endpoints.MapFallbackToFile("index.html");
             });
         }

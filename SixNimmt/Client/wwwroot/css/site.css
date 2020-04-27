@@ -33,7 +33,6 @@ app {
     .main .top-row {
         background-color: #f7f7f7;
         border-bottom: 1px solid #d6d5d5;
-        justify-content: flex-end;
     }
 
         .main .top-row > a, .main .top-row .btn-link {
@@ -46,39 +45,39 @@ app {
     text-overflow: ellipsis;
 }
 
-.sidebar {
+.topbar {
     background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%);
 }
 
-    .sidebar .top-row {
+    .topbar .top-row {
         background-color: rgba(0,0,0,0.4);
     }
 
-    .sidebar .navbar-brand {
+    .topbar .navbar-brand {
         font-size: 1.1rem;
     }
 
-    .sidebar .oi {
+    .topbar .oi {
         width: 2rem;
         font-size: 1.1rem;
         vertical-align: text-top;
         top: -2px;
     }
 
-    .sidebar .nav-item {
+    .topbar .nav-item {
         font-size: 0.9rem;
         padding-bottom: 0.5rem;
     }
 
-        .sidebar .nav-item:first-of-type {
+        .topbar .nav-item:first-of-type {
             padding-top: 1rem;
         }
 
-        .sidebar .nav-item:last-of-type {
+        .topbar .nav-item:last-of-type {
             padding-bottom: 1rem;
         }
 
-        .sidebar .nav-item a {
+        .topbar .nav-item a {
             color: #d7d7d7;
             border-radius: 4px;
             height: 3rem;
@@ -87,12 +86,7 @@ app {
             line-height: 3rem;
         }
 
-            .sidebar .nav-item a.active {
-                background-color: rgba(255,255,255,0.25);
-                color: white;
-            }
-
-            .sidebar .nav-item a:hover {
+            .topbar .nav-item a:hover {
                 background-color: rgba(255,255,255,0.1);
                 color: white;
             }
@@ -155,13 +149,6 @@ app {
         flex-direction: row;
     }
 
-    .sidebar {
-        width: 250px;
-        height: 100vh;
-        position: sticky;
-        top: 0;
-    }
-
     .main .top-row {
         position: sticky;
         top: 0;
@@ -170,14 +157,5 @@ app {
     .main > div {
         padding-left: 2rem !important;
         padding-right: 1.5rem !important;
-    }
-
-    .navbar-toggler {
-        display: none;
-    }
-
-    .sidebar .collapse {
-        /* Never collapse the sidebar for wide screens */
-        display: block;
     }
 }

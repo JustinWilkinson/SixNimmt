@@ -9,5 +9,7 @@ namespace SixNimmt.Shared
         public int Points { get; set; }
 
         public List<Card> Hand { get; set; }
+
+        public bool IsHost { get; set; }
     }
 }

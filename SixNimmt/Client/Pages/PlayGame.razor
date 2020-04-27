@@ -1,0 +1,67 @@
+﻿@page "/PlayGame/{GameId}"
+
+@using Microsoft.AspNetCore.SignalR.Client
+
+@inject HttpClient Http
+@inject LocalStorage Storage
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+@if (Game == null)
+{
+    @if (_urlWrong)
+    {
+        <p>Sorry, it doesn't look like this is a valid game - please make sure your URL is correct and retry.</p>
+    }
+    else
+    {
+        <p><em>Loading...</em></p>
+    }
+}
+else
+{
+
+}
+
+@code {
+    [Parameter]
+    public string GameId { get; set; }
+
+    public Player IdentifiedPlayer { get; set; }
+    public Game Game { get; private set; }
+
+    private bool _urlWrong = false;
+    private HubConnection _hubConnection;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        Game = JsonConvert.DeserializeObject<Game>(await Http.GetStringAsync($"api/Game/Get?id={GameId}"));
+
+        if (Game == null)
+        {
+            _urlWrong = true;
+        }
+        else if (!Game.Started)
+        {
+            NavigationManager.NavigateTo($"/WaitingRoom/{GameId}");
+        }
+        else
+        {
+            await ConfigureHubAsync();
+            IdentifiedPlayer = Game.Players.SingleOrDefault(x => x.Name == Storage.GetItem("playerName"));
+        }
+    }
+
+    private async Task ConfigureHubAsync()
+    {
+        _hubConnection = new HubConnectionBuilder().WithUrl(NavigationManager.ToAbsoluteUri("/GameHub")).WithAutomaticReconnect().Build();
+        _hubConnection.On<string>("UpdateGame", updatedGame =>
+        {
+            Game = JsonConvert.DeserializeObject<Game>(updatedGame);
+            StateHasChanged();
+        });
+        await _hubConnection.StartAsync();
+        await _hubConnection.InvokeAsync("AddToGroupAsync", GameId);
+    }
+}
