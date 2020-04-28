@@ -10,7 +10,7 @@ namespace SixNimmt.Shared
 
         public Deck(int cardCount = 104)
         {
-            for (var i = 0; i < cardCount; i++)
+            for (var i = 1; i <= cardCount; i++)
             {
                 var points = 0;
                 if (i % 5 == 0)

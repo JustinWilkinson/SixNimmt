@@ -185,3 +185,12 @@ html, body {
         font-size: 16px;
     }
 }
+
+
+#YourHand > div:first-child {
+    margin-left: auto;
+}
+
+#YourHand > div:nth-last-child(2) {
+    margin-right: auto;
+}

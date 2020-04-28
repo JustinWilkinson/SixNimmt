@@ -12,15 +12,15 @@ namespace SixNimmt.Server.Repository
     {
         void CreateGame(Game game);
 
-        void SaveGame(Game game);
-
-        void UpdatePlayerName(string gameId, string oldName, string newName);
-
         Game GetGame(string id);
 
         IEnumerable<Game> ListGames();
 
-        void SelectCard(string gameId, string playerName, Card card);
+        void Save(Game game);
+
+        void ModifyGame(string gameId, Action<Game> action);
+
+        T ModifyGame<T>(string gameId, Func<Game, T> function);
     }
 
     public class GameRepository : Repository, IGameRepository
@@ -47,26 +47,6 @@ namespace SixNimmt.Server.Repository
                 throw;
             }
         }
-
-        public void SaveGame(Game game)
-        {
-            try
-            {
-                var command = new SQLiteCommand("UPDATE Games SET GameJson = @Json WHERE Id = @Id");
-                command.AddParameter("@Id", game.Id);
-                command.AddParameter("@Json", game.Serialize());
-                Execute(command);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"An error occurred saving game '{game.Id}'.");
-                throw;
-            }
-        }
-
-        public void UpdatePlayerName(string gameId, string oldName, string newName) => ModifyGame(gameId, game => game.Players.Single(p => p.Name == oldName).Name = newName);
-
-        public void SelectCard(string gameId, string playerName, Card card) => ModifyGame(gameId, game => game.Players.Single(p => p.Name == playerName).SelectedCard = card);
 
         public Game GetGame(string id)
         {
@@ -96,10 +76,25 @@ namespace SixNimmt.Server.Repository
             }
         }
 
-
-        private void ModifyGame(string gameId, Action<Game> action)
+        public void Save(Game game)
         {
-            ExecuteInTransaction((connection) =>
+            try
+            {
+                var command = new SQLiteCommand("UPDATE Games SET GameJson = @Json WHERE Id = @Id");
+                command.AddParameter("@Id", game.Id);
+                command.AddParameter("@Json", game.Serialize());
+                Execute(command);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred saving game '{game.Id}'.");
+                throw;
+            }
+        }
+
+        public void ModifyGame(string gameId, Action<Game> action)
+        {
+            ExecuteInTransaction(connection =>
             {
                 var selectCommand = new SQLiteCommand("SELECT GameJson FROM Games WHERE Id = @Id;", connection);
                 selectCommand.AddParameter("@Id", gameId);
@@ -108,12 +103,37 @@ namespace SixNimmt.Server.Repository
                 {
                     var game = DeserializeColumn<Game>("GameJson")(reader);
                     action(game);
-                    var updateCommand = new SQLiteCommand("UPDATE Games SET GameJson = @Json WHERE Id = @Id", connection);
-                    updateCommand.AddParameter("@Id", game.Id);
-                    updateCommand.AddParameter("@Json", game.Serialize());
-                    updateCommand.ExecuteNonQuery();
+                    UpdateGame(connection, game);
                 }
             });
+        }
+
+        public T ModifyGame<T>(string gameId, Func<Game, T> function)
+        {
+            T returnValue = default;
+
+            ExecuteInTransaction(connection =>
+            {
+                var selectCommand = new SQLiteCommand("SELECT GameJson FROM Games WHERE Id = @Id;", connection);
+                selectCommand.AddParameter("@Id", gameId);
+                using var reader = selectCommand.ExecuteReader();
+                if (reader.Read())
+                {
+                    var game = DeserializeColumn<Game>("GameJson")(reader);
+                    returnValue = function(game);
+                    UpdateGame(connection, game);
+                }
+            });
+
+            return returnValue;
+        }
+
+        private void UpdateGame(SQLiteConnection connection, Game game)
+        {
+            var updateCommand = new SQLiteCommand("UPDATE Games SET GameJson = @Json WHERE Id = @Id", connection);
+            updateCommand.AddParameter("@Id", game.Id);
+            updateCommand.AddParameter("@Json", game.Serialize());
+            updateCommand.ExecuteNonQuery();
         }
     }
 }

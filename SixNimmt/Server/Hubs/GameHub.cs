@@ -15,6 +15,8 @@ namespace Codenames.Server.Hubs
         Task StartGameAsync(string gameId);
 
         Task PlayerSelectedCardAsync(string gameId, string playerName, Card card);
+
+        Task BroadcastCoordinatesAsync(string gameId, Coordinates coordinates);
     }
 
     public class GameHub : Hub, IGameHub
@@ -28,5 +30,7 @@ namespace Codenames.Server.Hubs
         public async Task StartGameAsync(string gameId) => await Clients.OthersInGroup(gameId).SendAsync("GameStarted");
 
         public async Task PlayerSelectedCardAsync(string gameId, string playerName, Card card) => await Clients.OthersInGroup(gameId).SendAsync("PlayerSelectedCard", playerName, card);
+
+        public async Task BroadcastCoordinatesAsync(string gameId, Coordinates coordinates) => await Clients.OthersInGroup(gameId).SendAsync("CoordinatesReceived", coordinates);
     }
 }
