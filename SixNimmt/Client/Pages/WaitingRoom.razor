@@ -1,19 +1,21 @@
 ﻿@page "/WaitingRoom/{GameId}"
 
-@using Microsoft.AspNetCore.SignalR.Client
-
 @inject HttpClient Http
 @inject LocalStorage Storage
 @inject NavigationManager NavigationManager
 
 <h3>Waiting Room</h3>
-<p>You can edit your player name using the input box in the table.</p>
 @if (_game == null)
 {
     <p><em>Loading...</em></p>
 }
+else if (_game.Started.HasValue)
+{
+    <p>Sorry, this game has been started by the host! Click here to host a new game. Click <NavLink href="@($"WaitingRoom/{Guid.NewGuid().ToString()}")" Match="NavLinkMatch.All">here</NavLink> to host a new game</p>
+}
 else
 {
+    <p>Distribute this URL to any players. You can edit your player name using the input box in the table.</p>
     <div class="row w-100 pl-3">
         <table class="table table-striped table-bordered col-4">
             <thead>
@@ -70,6 +72,10 @@ else
             await Http.PutJsonAsync("api/Game/New", GameId);
             _game = JsonConvert.DeserializeObject<Game>(await Http.GetStringAsync($"api/Game/Get?id={GameId}"));
             _player = _game.Players.Single();
+        }
+        else if (_game.Started.HasValue)
+        {
+            return;
         }
         else
         {
@@ -143,7 +149,8 @@ else
 
     private async Task StartGameAsync()
     {
-        await Task.WhenAll(Http.PostJsonAsync("api/Game/StartGame", JsonConvert.SerializeObject(_game)), _hubConnection.InvokeAsync("StartGameAsync", GameId));
+        await Http.PostJsonAsync("api/Game/StartGame", GameId);
+        await _hubConnection.InvokeAsync("StartGameAsync", GameId);
         NavigationManager.NavigateTo($"PlayGame/{GameId}");
     }
 }

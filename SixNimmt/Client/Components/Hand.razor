@@ -1,0 +1,112 @@
+﻿@using SixNimmt.Client.Pages
+
+@inject HttpClient Http
+@inject LocalStorage Storage
+@inject NavigationManager NavigationManager
+
+<div class="col-2 col-md-1">
+    <h5 class="mb-0">Your Hand:</h5>
+</div>
+<div id="YourHand" class="row col-11 bg-primary justify-content-center h-100 dropzone" ondragover="event.preventDefault();">
+    @foreach (var card in IdentifiedPlayer.Hand)
+    {
+        <div class="col-2 col-md-1 h-100" draggable="true" @ondragstart="() => StartDragCard(card)" @ondrop="() => DropCard(card)">
+            <div class="card border rounded h-100 bg-light">
+                <div class="card-header text-right">
+                    @card.Points
+                </div>
+                <div class="row card-body text-center align-items-center">
+                    <h2 class="col mb-0 font-weight-bold">@card.Value</h2>
+                </div>
+            </div>
+        </div>
+    }
+    @if (IdentifiedPlayer.SelectedCard != null)
+    {
+        <div class="col-2 col-md-1 h-100" @ondrop="() => DropCard(null)">
+            <div class="card h-100 bg-primary border-0">
+            </div>
+        </div>
+    }
+    <div class="col-2 col-md-1 h-100 mr-auto">
+        <div class="card border-success rounded h-100 bg-light dropzone" ondragover="event.preventDefault();" draggable="@(IdentifiedPlayer.SelectedCard != null ? "true" : "false")" @ondragstart="() => StartDragCard(IdentifiedPlayer.SelectedCard)" @ondrop="() => SelectCardAsync()">
+            @if (IdentifiedPlayer.SelectedCard == null)
+            {
+                <div class="row card-body text-center align-items-center">
+                    <span class="text-muted">Drag Your Selection Here</span>
+                </div>
+            }
+            else
+            {
+                <div class="card-header text-right">
+                    @IdentifiedPlayer.SelectedCard.Points
+                </div>
+                <div class="row card-body text-center align-items-center">
+                    <h2 class="col p-0 mb-0 font-weight-bold">@IdentifiedPlayer.SelectedCard.Value</h2>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter]
+    public PlayGame Parent { get; set; }
+
+    private Game Game => Parent.Game;
+    private Player IdentifiedPlayer => Parent.IdentifiedPlayer;
+
+    private int _draggedCardIndex;
+
+    private void StartDragCard(Card card) => _draggedCardIndex = IdentifiedPlayer.Hand.FindIndex(c => c.Value == card.Value);
+
+    private async Task DropCard(Card card)
+    {
+        var newIndex = card != null ? IdentifiedPlayer.Hand.FindIndex(c => c.Value == card.Value) : IdentifiedPlayer.Hand.Count;
+        Card draggedCard;
+        if (_draggedCardIndex >= 0)
+        {
+            draggedCard = IdentifiedPlayer.Hand[_draggedCardIndex];
+            IdentifiedPlayer.Hand.RemoveAt(_draggedCardIndex);
+        }
+        else
+        {
+            draggedCard = IdentifiedPlayer.SelectedCard;
+            IdentifiedPlayer.SelectedCard = null;
+            await Parent.UpdateSelectedCardAsync();
+        }
+
+        AddToHand(newIndex, draggedCard);
+    }
+
+    private async Task SelectCardAsync()
+    {
+        if (IdentifiedPlayer.SelectedCard == null)
+        {
+            IdentifiedPlayer.SelectedCard = IdentifiedPlayer.Hand[_draggedCardIndex];
+            IdentifiedPlayer.Hand.RemoveAt(_draggedCardIndex);
+        }
+        else
+        {
+            var oldSelectedCard = IdentifiedPlayer.SelectedCard;
+            IdentifiedPlayer.SelectedCard = IdentifiedPlayer.Hand[_draggedCardIndex];
+            IdentifiedPlayer.Hand.RemoveAt(_draggedCardIndex);
+            AddToHand(_draggedCardIndex, oldSelectedCard);
+        }
+
+        Game.ShowHand = Game.Players.Any(p => p.SelectedCard == null);
+        await Parent.UpdateSelectedCardAsync();
+    }
+
+    private void AddToHand(int index, Card card)
+    {
+        if (IdentifiedPlayer.Hand.Count > index)
+        {
+            IdentifiedPlayer.Hand.Insert(index, card);
+        }
+        else
+        {
+            IdentifiedPlayer.Hand.Add(card);
+        }
+    }
+}

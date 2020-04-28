@@ -4,7 +4,6 @@ using SixNimmt.Server.Extensions;
 using SixNimmt.Server.Repository;
 using SixNimmt.Shared;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -18,8 +17,6 @@ namespace SixNimmt.Server.Controllers
         private readonly ILogger<GameController> _logger;
         private readonly IGameRepository _gameRepository;
 
-        private static readonly ConcurrentDictionary<string, object> _locks = new ConcurrentDictionary<string, object>();
-
         public GameController(ILogger<GameController> logger, IGameRepository gameRepository)
         {
             _logger = logger;
@@ -27,31 +24,59 @@ namespace SixNimmt.Server.Controllers
         }
 
         [HttpPut("New")]
-        public void New(JsonElement gameId) => _gameRepository.CreateGame(new Game { Id = new Guid(gameId.GetString()), Players = new List<Player> { new Player { Name = "Host", IsHost = true, Hand = new List<Card>() } } });
+        public void New(JsonElement gameId)
+        {
+            _gameRepository.CreateGame(new Game
+            {
+                Id = new Guid(gameId.GetString()),
+                Players = new List<Player> { new Player { Name = "Host", IsHost = true, Hand = new List<Card>() } }
+            });
+        }
 
         [HttpPost("Join")]
-        public Player Join(JsonElement json)
+        public Player Join(JsonElement gameIdJson)
         {
-            var gameId = json.GetString();
-            lock (_locks.GetOrAdd(gameId, new object()))
+            return _gameRepository.ModifyGame(gameIdJson.GetString(), game =>
             {
-                var game = _gameRepository.GetGame(gameId);
                 var player = new Player { Name = $"Player {game.Players.Count}", Hand = new List<Card>() };
                 game.Players.Add(player);
-                _gameRepository.SaveGame(game);
                 return player;
-            }
+            });
         }
 
         [HttpPost("UpdatePlayer")]
         public void UpdatePlayer(JsonElement json)
         {
-            var gameId = json.GetStringProperty("GameId");
-            lock (_locks.GetOrAdd(gameId, new object()))
-            {
-                _gameRepository.UpdatePlayerName(gameId, json.GetStringProperty("OldName"), json.GetStringProperty("NewName"));
-            }
+            _gameRepository.ModifyGame(json.GetStringProperty("GameId"), game => game.Players.Single(p => p.Name == json.GetStringProperty("OldName")).Name = json.GetStringProperty("NewName"));
         }
+
+        [HttpPost("SelectCard")]
+        public void SelectCard(JsonElement json)
+        {
+            var newSelectedCard = json.DeserializeStringProperty<Card>("Card");
+            _gameRepository.ModifyGame(json.GetStringProperty("GameId"), game =>
+            {
+                if (game.ShowHand)
+                {
+                    var player = game.Players.Single(p => p.Name == json.GetStringProperty("PlayerName"));
+                    var oldSelectedCard = player.SelectedCard;
+                    if (oldSelectedCard != null)
+                    {
+                        player.Hand.Add(oldSelectedCard);
+                        player.Hand.Sort((c1, c2) => c1.Value.CompareTo(c2.Value));
+                    }
+                    if (newSelectedCard != null)
+                    {
+                        player.Hand.RemoveAt(player.Hand.FindIndex(c => c.Value == newSelectedCard.Value));
+                    }
+                    player.SelectedCard = newSelectedCard;
+                    game.ShowHand = game.Players.Any(p => p.SelectedCard == null);
+                }
+            });
+        }
+
+        [HttpPost("Save")]
+        public void Save(JsonElement json) => _gameRepository.Save(json.Deserialize<Game>());
 
         [HttpGet("Get")]
         public string Get(string id) => _gameRepository.GetGame(id).Serialize();
@@ -59,32 +84,7 @@ namespace SixNimmt.Server.Controllers
         [HttpGet("List")]
         public string List() => _gameRepository.ListGames().Serialize();
 
-        [HttpPost("Save")]
-        public void Save(JsonElement gameJson)
-        {
-            var game = gameJson.Deserialize<Game>();
-            lock (_locks.GetOrAdd(game.Id.ToString(), new object()))
-            {
-                _gameRepository.SaveGame(gameJson.Deserialize<Game>());
-            }
-        }
-
         [HttpPost("StartGame")]
-        public void StartGame(JsonElement gameJson)
-        {
-            var game = gameJson.Deserialize<Game>();
-            lock (_locks.GetOrAdd(game.Id.ToString(), new object()))
-            {
-                game.StartGame();
-                _gameRepository.SaveGame(game);
-            }
-        }
-
-        [HttpDelete("Delete")]
-        public void Delete(string gameId)
-        {
-            _locks.TryRemove(gameId, out _);
-            _gameRepository.DeleteGame(gameId);
-        }
+        public void StartGame(JsonElement gameIdJson) => _gameRepository.ModifyGame(gameIdJson.GetString(), game => game.StartGame());
     }
 }

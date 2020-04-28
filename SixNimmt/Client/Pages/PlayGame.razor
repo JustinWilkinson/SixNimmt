@@ -1,7 +1,5 @@
 ﻿@page "/PlayGame/{GameId}"
 
-@using Microsoft.AspNetCore.SignalR.Client
-
 @inject HttpClient Http
 @inject LocalStorage Storage
 @inject NavigationManager NavigationManager
@@ -9,7 +7,7 @@
 
 @if (Game == null)
 {
-    @if (_urlWrong)
+    if (_urlWrong)
     {
         <p>Sorry, it doesn't look like this is a valid game - please make sure your URL is correct and retry.</p>
     }
@@ -18,9 +16,108 @@
         <p><em>Loading...</em></p>
     }
 }
+else if (IdentifiedPlayer == null)
+{
+    <p>Sorry, it doesn't look like you're part of this game. Click <NavLink href="@($"WaitingRoom/{Guid.NewGuid().ToString()}")" Match="NavLinkMatch.All">here</NavLink> to host a new game</p>
+}
 else
 {
-
+    <Modal Header="Game Over" Show="Game.Ended.HasValue" Closable="true">
+        @GetWinner()
+    </Modal>
+    <Modal Header="Round Ended" Show="!Game.Ended.HasValue && Game.RoundEnded" Closable="false">
+        @if (IdentifiedPlayer.IsHost)
+        {
+            <div class="row">
+                <div class="col form-inline">
+                    <label class="col-form-label mr-2">Either</label>
+                    <button class="btn btn-success mr-2" @onclick="() => StartNewRoundAsync()">Start new round</button>
+                    <label class="col-form-label mr-2">or</label>
+                    <button class="btn btn-success mr-2" @onclick="() => EndGameAsync()">End game</button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <span>Waiting for host to start next round...</span>
+        }
+    </Modal>
+    <div class="container-fluid" style="height: calc(0.8 * (100vh - 4.6rem));">
+        <div class="row h-100">
+            <div class="col-9 col-md-6 ml-auto mr-auto h-100">
+                @for (int i = 0; i < Game.CardRows.GetLength(0); i++)
+                {
+                    <div class="row mb-2 align-items-center justify-content-center" style="height: calc(25% - 0.5em);">
+                        @for (int j = 0; j < Game.CardRows.GetLength(1); j++)
+                        {
+                            var isDropzone = !Game.ShowHand && j > 0 && Game.CardRows[i, j] == null && Game.CardRows[i, j - 1] != null;
+                            var tempI = i;
+                            var tempJ = j;
+                            <div class="col-2 h-100 @(isDropzone ? "dropzone" : "")" ondragover="@(isDropzone ? "event.preventDefault();" : "")" @ondrop="() => CardPlayed(tempI, tempJ)">
+                                <div class="card border rounded h-100">
+                                    @if (Game.CardRows[i, j] != null)
+                                    {
+                                        <div class="card-header text-right font-weight-bold">
+                                            @Game.CardRows[i, j].Points
+                                        </div>
+                                        <div class="row card-body text-center align-items-center">
+                                            <h2 class="col p-0 mb-0 font-weight-bold">@Game.CardRows[i, j].Value</h2>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="col-3 col-md-2 h-100 pb-2">
+                <GameSidebar Game="Game" />
+            </div>
+        </div>
+        <div class="row p-1 bg-primary justify-content-center align-items-center player-hand" style="height: calc(0.2 * (100vh - 4.6rem));">
+            @if (Game.ShowHand)
+            {
+                <CascadingValue Value="this">
+                    <Hand />
+                </CascadingValue>
+            }
+            else
+            {
+                var playerIndex = 0;
+                foreach (var player in Game.Players.Where(p => p.SelectedCard != null).OrderBy(p => p.SelectedCard.Value))
+                {
+                    <div class="col-2 col-md-1 h-100">
+                        @if (playerIndex == 0 && player.Name == IdentifiedPlayer.Name)
+                        {
+                            <div class="card border rounded h-100 bg-light" draggable="true" @ondrag="e => BroadcastCoordinates(e)">
+                                <div class="card-header text-right">
+                                    @player.SelectedCard.Points
+                                </div>
+                                <div class="row card-body text-center align-items-center">
+                                    <h2 class="col mb-0 font-weight-bold">@player.SelectedCard.Value</h2>
+                                </div>
+                                <div class="card-footer text-muted text-center p-0">@player.Name</div>
+                            </div>
+                        }
+                        else
+                        {
+                            var styles = _draggedPlayingCardCoordinates != null ? $"position: absolute; left: {_draggedPlayingCardCoordinates.X}; top: {_draggedPlayingCardCoordinates.Y};" : "";
+                            <div class="card border rounded h-100 bg-light" style="">
+                                <div class="card-header text-right">
+                                    @player.SelectedCard.Points
+                                </div>
+                                <div class="row card-body text-center align-items-center">
+                                    <h2 class="col mb-0 font-weight-bold">@player.SelectedCard.Value</h2>
+                                </div>
+                                <div class="card-footer text-muted text-center p-0">@player.Name</div>
+                            </div>
+                        }
+                    </div>
+                    playerIndex++;
+                }
+            }
+        </div>
+    </div>
 }
 
 @code {
@@ -30,9 +127,10 @@ else
     public Player IdentifiedPlayer { get; set; }
     public Game Game { get; private set; }
 
-    private bool _urlWrong = false;
     private HubConnection _hubConnection;
 
+    private bool _urlWrong = false;
+    private Coordinates _draggedPlayingCardCoordinates;
 
     protected override async Task OnInitializedAsync()
     {
@@ -42,14 +140,17 @@ else
         {
             _urlWrong = true;
         }
-        else if (!Game.Started)
+        else if (!Game.Started.HasValue)
         {
             NavigationManager.NavigateTo($"/WaitingRoom/{GameId}");
         }
         else
         {
-            await ConfigureHubAsync();
             IdentifiedPlayer = Game.Players.SingleOrDefault(x => x.Name == Storage.GetItem("playerName"));
+            if (IdentifiedPlayer != null)
+            {
+                await ConfigureHubAsync();
+            }
         }
     }
 
@@ -59,9 +160,103 @@ else
         _hubConnection.On<string>("UpdateGame", updatedGame =>
         {
             Game = JsonConvert.DeserializeObject<Game>(updatedGame);
+            IdentifiedPlayer = Game.Players.Single(x => x.Name == IdentifiedPlayer.Name);
+            _draggedPlayingCardCoordinates = null;
+            StateHasChanged();
+        });
+        _hubConnection.On<string, Card>("PlayerSelectedCard", (playerName, card) =>
+        {
+            var player = Game.Players.Single(p => p.Name == playerName);
+            player.SelectedCard = card;
+            player.Hand.Remove(card);
+            Game.ShowHand = Game.Players.Any(p => p.SelectedCard == null);
+            StateHasChanged();
+        });
+        _hubConnection.On<Coordinates>("CoordinatesReceived", (coordinates) =>
+        {
+            _draggedPlayingCardCoordinates = coordinates;
             StateHasChanged();
         });
         await _hubConnection.StartAsync();
         await _hubConnection.InvokeAsync("AddToGroupAsync", GameId);
+    }
+
+    private async Task BroadcastCoordinates(DragEventArgs e) => await _hubConnection.InvokeAsync("BroadcastCoordinatesAsync", GameId, new Coordinates { X = e.ClientX, Y = e.ClientY });
+
+    private async Task CardPlayed(int row, int column)
+    {
+        var cardsInRow = new List<Card>();
+        for (int i = 0; i < Game.CardRows.GetLength(1); i++)
+        {
+            if (Game.CardRows[row, i] != null)
+            {
+                cardsInRow.Add(Game.CardRows[row, i]);
+            }
+        }
+
+        if (IdentifiedPlayer.SelectedCard.Value < cardsInRow.Max(c => c.Value) || column == Game.CardRows.GetLength(1) - 1)
+        {
+            IdentifiedPlayer.Points += cardsInRow.Sum(c => c.Points);
+            for (int i = 1; i < cardsInRow.Count; i++)
+            {
+                Game.CardRows[row, i] = null;
+            }
+            Game.CardRows[row, 0] = IdentifiedPlayer.SelectedCard;
+        }
+        else
+        {
+            Game.CardRows[row, column] = IdentifiedPlayer.SelectedCard;
+        }
+
+        IdentifiedPlayer.SelectedCard = null;
+        Game.ShowHand = Game.Players.All(p => p.SelectedCard == null);
+        Game.RoundEnded = Game.Players.All(p => p.Hand.Count == 0);
+
+        if (Game.RoundEnded && Game.Players.Any(p => p.Points > 66))
+        {
+            Game.Ended = DateTime.UtcNow;
+        }
+
+        await UpdateGameAsync();
+    }
+
+    private async Task StartNewRoundAsync()
+    {
+        Game.StartRound();
+        await UpdateGameAsync();
+    }
+
+    private async Task EndGameAsync()
+    {
+        Game.Ended = DateTime.UtcNow;
+        await UpdateGameAsync();
+    }
+
+    private async Task UpdateGameAsync()
+    {
+        var serializedGame = JsonConvert.SerializeObject(Game);
+        await Task.WhenAll(Http.PostJsonAsync("api/Game/Save", serializedGame), _hubConnection.InvokeAsync("UpdateGameAsync", GameId, serializedGame));
+    }
+
+    private string GetWinner()
+    {
+        var lowestScore = Game.Players.Min(c => c.Points);
+        var winners = Game.Players.Where(p => p.Points == lowestScore).ToList();
+        if (winners.Count > 1)
+        {
+            return $"{string.Join(", ", winners.Take(winners.Count - 1).Select(w => w.Name))} and {winners.Last().Name} are joint winners!";
+        }
+        else
+        {
+            return $"{winners.First().Name} is the winner!";
+        }
+    }
+
+    public async Task UpdateSelectedCardAsync()
+    {
+        await Task.WhenAll(
+        Http.PostJsonAsync("api/Game/SelectCard", new { GameId = Game.Id, PlayerName = IdentifiedPlayer.Name, Card = JsonConvert.SerializeObject(IdentifiedPlayer.SelectedCard) }),
+        _hubConnection.InvokeAsync("PlayerSelectedCardAsync", Game.Id, IdentifiedPlayer.Name, IdentifiedPlayer.SelectedCard));
+        StateHasChanged();
     }
 }
