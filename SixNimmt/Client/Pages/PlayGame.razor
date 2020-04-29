@@ -57,7 +57,7 @@ else
                                 <div class="card border rounded h-100">
                                     @if (Game.CardRows[i, j] != null)
                                     {
-                                        <div class="card-header text-right font-weight-bold">
+                                        <div class="card-header text-right font-weight-bold pl-3 pr-3 pt-2 pb-2">
                                             @Game.CardRows[i, j].Points
                                         </div>
                                         <div class="row card-body text-center align-items-center">
@@ -92,7 +92,7 @@ else
                             if (playerIndex == 0 && player.Name == IdentifiedPlayer.Name)
                             {
                                 <div class="card border rounded h-100 bg-light size-border-box" draggable="true" @ondragstart="e => StartDragAsync(e)" @ondrag="e => BroadcastCoordinatesAsync(e)" @ondragend="StopDragAsync" @ref="_draggedCard">
-                                    <div class="card-header text-right font-weight-bold">
+                                    <div class="card-header text-right font-weight-bold pl-3 pr-3 pt-2 pb-2">
                                         @player.SelectedCard.Points
                                     </div>
                                     <div class="row card-body text-center align-items-center">
@@ -104,7 +104,7 @@ else
                             else
                             {
                                 <div class="card border rounded h-100 bg-light">
-                                    <div class="card-header text-right font-weight-bold">
+                                    <div class="card-header text-right font-weight-bold pl-3 pr-3 pt-2 pb-2">
                                         @player.SelectedCard.Points
                                     </div>
                                     <div class="row card-body text-center align-items-center">
@@ -122,9 +122,9 @@ else
         @if (_draggedPlayingCardCoordinates != null)
         {
             var player = Game.Players.Where(p => p.SelectedCard != null).OrderBy(p => p.SelectedCard.Value).First();
-            <div class="col-2 col-md-1" style="@($"position: fixed; left: {_draggedPlayingCardCoordinates.X}px; top: {_draggedPlayingCardCoordinates.Y}px;")">
+            <div class="col-2 col-md-1" style="@($"position: fixed; left: {_draggedPlayingCardCoordinates.X}%; top: {_draggedPlayingCardCoordinates.Y}%;")">
                 <div class="card border rounded bg-light">
-                    <div class="card-header text-right font-weight-bold">
+                    <div class="card-header text-right font-weight-bold pl-3 pr-3 pt-2 pb-2">
                         @player.SelectedCard.Points
                     </div>
                     <div class="row card-body text-center align-items-center">
@@ -149,6 +149,7 @@ else
     private bool _urlWrong = false;
     private Coordinates _draggedPlayingCardCoordinates;
     private Coordinates _draggedPlayingCardOffset;
+    private Coordinates _scale;
     private ElementReference _draggedCard;
 
     protected override async Task OnInitializedAsync()
@@ -170,6 +171,7 @@ else
             {
                 await ConfigureHubAsync();
             }
+            _scale = await JSRuntime.InvokeAsync<Coordinates>("sixnimmt.getScreenSize");
         }
     }
 
@@ -200,15 +202,16 @@ else
         await _hubConnection.InvokeAsync("AddToGroupAsync", GameId);
     }
 
-    private async Task BroadcastCoordinatesAsync(DragEventArgs e)
-    {
-        await _hubConnection.InvokeAsync("BroadcastCoordinatesAsync", GameId, new Coordinates { X = e.ClientX + _draggedPlayingCardOffset.X, Y = e.ClientY + _draggedPlayingCardOffset.Y });
-    }
-
     private async Task StartDragAsync(DragEventArgs e)
     {
         var cardCoordinates = await JSRuntime.InvokeAsync<Coordinates>("sixnimmt.getElementCoordinates", _draggedCard);
         _draggedPlayingCardOffset = new Coordinates { X = cardCoordinates.X - e.ClientX, Y = cardCoordinates.Y - e.ClientY };
+    }
+
+    private async Task BroadcastCoordinatesAsync(DragEventArgs e)
+    {
+        var scaledPosition = new Coordinates { X = 100 * (e.ClientX + _draggedPlayingCardOffset.X) / _scale.X, Y = 100 * (e.ClientY + _draggedPlayingCardOffset.Y) / _scale.Y };
+        await _hubConnection.InvokeAsync("BroadcastCoordinatesAsync", GameId, scaledPosition);
     }
 
     private async Task StopDragAsync()

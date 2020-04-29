@@ -3,5 +3,8 @@
         let bounds = element.getBoundingClientRect();
         let parentStyles = window.getComputedStyle(element.parentElement);
         return { X: bounds.left - parseFloat(parentStyles.paddingLeft), Y: bounds.top - parseFloat(parentStyles.paddingTop) }
+    },
+    getScreenSize: function () {
+        return { X: window.innerWidth, Y: window.innerHeight }
     }
 }
