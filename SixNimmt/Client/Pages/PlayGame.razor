@@ -18,7 +18,9 @@
 }
 else if (IdentifiedPlayer == null)
 {
-    <p>Sorry, it doesn't look like you're part of this game. Click <NavLink href="@($"WaitingRoom/{Guid.NewGuid().ToString()}")" Match="NavLinkMatch.All">here</NavLink> to host a new game</p>
+    <p>
+        Sorry, it doesn't look like you're part of this game. Click <NavLink href="@($"WaitingRoom/{Guid.NewGuid().ToString()}")" Match="NavLinkMatch.All">here</NavLink> to host a new game
+    </p>
 }
 else
 {
@@ -87,53 +89,55 @@ else
                 foreach (var player in Game.Players.Where(p => p.SelectedCard != null).OrderBy(p => p.SelectedCard.Value))
                 {
                     <div class="col-2 col-md-1 h-100">
-                        @if (playerIndex == 0 && _draggedPlayingCardCoordinates == null || playerIndex > 0)
+                        @if (playerIndex == 0 && player.Name == IdentifiedPlayer.Name)
                         {
-                            if (playerIndex == 0 && player.Name == IdentifiedPlayer.Name)
-                            {
-                                <div class="card border rounded h-100 bg-light size-border-box" draggable="true" @ondragstart="e => StartDragAsync(e)" @ondrag="e => BroadcastCoordinatesAsync(e)" @ondragend="StopDragAsync" @ref="_draggedCard">
-                                    <div class="card-header text-right font-weight-bold pl-3 pr-3 pt-2 pb-2">
+                            <div class="card rounded h-100 bg-light" draggable="true" @ondragstart="e => StartDragAsync(e)" @ondrag="e => BroadcastCoordinatesAsync(e)" @ondragend="StopDragAsync" @ref="_draggedCard">
+                                <div class="card-header text-right font-weight-bold pl-3 pr-3 pt-2 pb-2">
+                                    @player.SelectedCard.Points
+                                </div>
+                                <div class="row card-body text-center align-items-center">
+                                    <h2 class="col p-0 mb-0 font-weight-bold">@player.SelectedCard.Value</h2>
+                                </div>
+                                <div class="card-footer text-muted text-center p-0">
+                                    @player.Name
+                                </div>
+                            </div>
+                        }
+                        else if (playerIndex == 0 && _draggedPlayingCardCoordinates != null)
+                        {
+                            <div style="@($"position: fixed; left: {_draggedPlayingCardCoordinates.X}%; top: {_draggedPlayingCardCoordinates.Y}%;")">
+                                <div class="card border rounded bg-light" style="@($"width: {_cardSize.X}px; height: {_cardSize.Y}px;")">
+                                    <div class="card-header text-right font-weight-bold pl-3 pr-3 pt-3 pb-2">
                                         @player.SelectedCard.Points
                                     </div>
                                     <div class="row card-body text-center align-items-center">
-                                        <h2 class="col mb-0 font-weight-bold">@player.SelectedCard.Value</h2>
+                                        <h2 class="col p-0 mb-0 font-weight-bold">@player.SelectedCard.Value</h2>
                                     </div>
-                                    <div class="card-footer text-muted text-center p-0">@player.Name</div>
+                                    <div class="card-footer text-muted text-center p-0">
+                                        @player.Name
+                                    </div>
                                 </div>
-                            }
-                            else
-                            {
-                                <div class="card border rounded h-100 bg-light">
-                                    <div class="card-header text-right font-weight-bold pl-3 pr-3 pt-2 pb-2">
-                                        @player.SelectedCard.Points
-                                    </div>
-                                    <div class="row card-body text-center align-items-center">
-                                        <h2 class="col mb-0 font-weight-bold">@player.SelectedCard.Value</h2>
-                                    </div>
-                                    <div class="card-footer text-muted text-center p-0">@player.Name</div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="card border rounded h-100 bg-light">
+                                <div class="card-header text-right font-weight-bold pl-3 pr-3 pt-3 pb-2">
+                                    @player.SelectedCard.Points
                                 </div>
-                            }
+                                <div class="row card-body text-center align-items-center">
+                                    <h2 class="col p-0 mb-0 font-weight-bold">@player.SelectedCard.Value</h2>
+                                </div>
+                                <div class="card-footer text-muted text-center p-0">
+                                    @player.Name
+                                </div>
+                            </div>
                         }
                     </div>
                     playerIndex++;
                 }
             }
         </div>
-        @if (_draggedPlayingCardCoordinates != null)
-        {
-            var player = Game.Players.Where(p => p.SelectedCard != null).OrderBy(p => p.SelectedCard.Value).First();
-            <div class="col-2 col-md-1" style="@($"position: fixed; left: {_draggedPlayingCardCoordinates.X}%; top: {_draggedPlayingCardCoordinates.Y}%;")">
-                <div class="card border rounded bg-light">
-                    <div class="card-header text-right font-weight-bold pl-3 pr-3 pt-2 pb-2">
-                        @player.SelectedCard.Points
-                    </div>
-                    <div class="row card-body text-center align-items-center">
-                        <h2 class="col mb-0 font-weight-bold">@player.SelectedCard.Value</h2>
-                    </div>
-                    <div class="card-footer text-muted text-center p-0">@player.Name</div>
-                </div>
-            </div>
-        }
     </div>
 }
 
@@ -150,6 +154,7 @@ else
     private Coordinates _draggedPlayingCardCoordinates;
     private Coordinates _draggedPlayingCardOffset;
     private Coordinates _scale;
+    private Coordinates _cardSize;
     private ElementReference _draggedCard;
 
     protected override async Task OnInitializedAsync()
@@ -172,6 +177,14 @@ else
                 await ConfigureHubAsync();
             }
             _scale = await JSRuntime.InvokeAsync<Coordinates>("sixnimmt.getScreenSize");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender && _cardSize == null)
+        {
+            _cardSize = await JSRuntime.InvokeAsync<Coordinates>("sixnimmt.getCardSize");
         }
     }
 

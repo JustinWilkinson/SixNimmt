@@ -190,14 +190,18 @@ html, body {
     }
 }
 
-#YourHand > div:first-child {
+.your-hand > div:first-child {
     margin-left: auto;
 }
 
-#YourHand > div:nth-last-child(2) {
+.your-hand > div:nth-last-child(2) {
     margin-right: auto;
 }
 
 [draggable = "true"] {
     cursor: move;
+}
+
+.drag-wrapper {
+    background-color: white;
 }

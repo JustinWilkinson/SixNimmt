@@ -6,5 +6,13 @@
     },
     getScreenSize: function () {
         return { X: window.innerWidth, Y: window.innerHeight }
+    },
+    getCardSize: function () {
+        let cards = document.getElementsByClassName('card');
+        if (cards.length > 0) {
+            let styles = window.getComputedStyle(cards[0]);
+            return { X: parseFloat(styles.width), Y: parseFloat(styles.height) };
+        }
+        return null;
     }
 }
