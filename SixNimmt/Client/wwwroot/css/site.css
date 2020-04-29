@@ -140,7 +140,7 @@ app {
 }
 
 .main > div {
-    padding-left: 2rem !important;
+    padding-left: 1.5rem !important;
     padding-right: 1.5rem !important;
 }
 
@@ -154,43 +154,54 @@ html, body {
     overflow-y: auto;
 }
 
-@media (min-height: 320px) and (min-width: 480px) {
+@media (min-height: 460px) and (min-width: 480px) {
     html, body {
         font-size: 8px;
     }
 }
 
-@media (min-height: 440px) and (min-width: 720px)  {
+@media (min-height: 540px) and (min-width: 900px)  {
     html, body {
         font-size: 10px;
     }
 }
 
-@media (min-height: 560px) and (min-width: 1080px) {
+@media (min-height: 640px) and (min-width: 1080px) {
     html, body {
         font-size: 12px;
     }
 }
 
-
-@media (min-height: 680px) and (min-width: 1200px) {
+@media (min-height: 720px) and (min-width: 1200px) {
     html, body {
         font-size: 14px;
     }
 }
 
-
 @media (min-height: 800px) and (min-width: 1440px) {
+    html, body {
+        font-size: 15px;
+    }
+}
+
+@media (min-height: 880px) and (min-width: 1700px) {
     html, body {
         font-size: 16px;
     }
 }
 
-
-#YourHand > div:first-child {
+.your-hand > div:first-child {
     margin-left: auto;
 }
 
-#YourHand > div:nth-last-child(2) {
+.your-hand > div:nth-last-child(2) {
     margin-right: auto;
+}
+
+[draggable = "true"] {
+    cursor: move;
+}
+
+.drag-wrapper {
+    background-color: white;
 }
