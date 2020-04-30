@@ -65,6 +65,12 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        if (Storage.GetItem("gameId") != GameId)
+        {
+            Storage.RemoveItem("playerName");
+            Storage.SetItem("gameId", GameId);
+        }
+
         await ConfigureHubAsync();
         _game = JsonConvert.DeserializeObject<Game>(await Http.GetStringAsync($"api/Game/Get?id={GameId}"));
         if (_game == null)

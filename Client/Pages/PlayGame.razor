@@ -137,7 +137,7 @@ else
         {
             _urlWrong = true;
         }
-        else if (!Game.Started.HasValue)
+        else if (!Game.Started.HasValue || Storage.GetItem("gameId") != GameId)
         {
             NavigationManager.NavigateTo($"/WaitingRoom/{GameId}");
         }
