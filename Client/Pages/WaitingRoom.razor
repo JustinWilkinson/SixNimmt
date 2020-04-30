@@ -1,7 +1,7 @@
 ﻿@page "/WaitingRoom/{GameId}"
 
 @inject HttpClient Http
-@inject LocalStorage Storage
+@inject GameStorage Storage
 @inject NavigationManager NavigationManager
 
 <h3>Waiting Room</h3>
@@ -65,6 +65,12 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        if (Storage.GameId != GameId)
+        {
+            Storage.GameId = GameId;
+            Storage.PlayerName = null;
+        }
+
         await ConfigureHubAsync();
         _game = JsonConvert.DeserializeObject<Game>(await Http.GetStringAsync($"api/Game/Get?id={GameId}"));
         if (_game == null)
@@ -73,13 +79,13 @@ else
             _game = JsonConvert.DeserializeObject<Game>(await Http.GetStringAsync($"api/Game/Get?id={GameId}"));
             _player = _game.Players.Single();
         }
-        else if (_game.Started.HasValue)
+        else if (_game.Started.HasValue )
         {
             return;
         }
         else
         {
-            var playerName = Storage.GetItem("playerName");
+            var playerName = Storage.PlayerName;
             if (playerName == null)
             {
                 await JoinGameAsync();
@@ -89,13 +95,13 @@ else
                 _player = _game.Players.SingleOrDefault(p => p.Name == playerName);
                 if (_player == null)
                 {
-                    Storage.RemoveItem("playerName");
+                    Storage.PlayerName = null;
                     await JoinGameAsync();
                 }
             }
         }
 
-        Storage.SetItem("playerName", _player.Name);
+        Storage.PlayerName = _player.Name;
     }
 
     private async Task ConfigureHubAsync()
@@ -141,7 +147,7 @@ else
                     Http.PostJsonAsync("api/Game/UpdatePlayer", new { GameId = GameId, OldName = _player.Name, NewName = newName }),
                     _hubConnection.InvokeAsync("UpdatePlayerNameAsync", GameId, _player.Name, newName));
                 _player.Name = newName;
-                Storage.SetItem("playerName", _player.Name);
+                Storage.PlayerName = _player.Name;
                 _newNameValidationMessage = null;
             }
         }
