@@ -45,24 +45,27 @@ else
     <div id="GameContainer" class="container-fluid" style="height: calc(100vh - 4.6rem);">
         <div class="row" style="height: 80%;">
             <div class="col-9 col-md-6 ml-auto mr-auto h-100">
-                @for (int i = 0; i < Game.CardRows.GetLength(0); i++)
-                {
-                    <div class="row mb-2 align-items-center justify-content-center" style="height: calc(25% - 0.5em);">
-                        @for (int j = 0; j < Game.CardRows.GetLength(1); j++)
-                        {
-                            var isDropzone = !Game.ShowHand && j > 0 && Game.CardRows[i, j] == null && Game.CardRows[i, j - 1] != null;
-                            var tempI = i;
-                            var tempJ = j;
-                            <div class="col-2 h-100 @(isDropzone ? "dropzone" : "")" ondragover="@(isDropzone ? "event.preventDefault();" : "")" @ondrop="() => CardPlayed(tempI, tempJ)">
-                                <div class="card border rounded h-100">
-                                    @if (Game.CardRows[i, j] != null)
-                                    {
-                                        <CardInfo Card="Game.CardRows[i, j]" />
-                                    }
+                @{
+                    var card = !Game.ShowHand ? Game.Board.GetCardWithMinimumDifference(IdentifiedPlayer.SelectedCard) : null;
+                    for (int i = 0; i < Game.Board.RowCount; i++)
+                    {
+                        <div class="row mb-2 align-items-center justify-content-center" style="height: calc(25% - 0.5em);">
+                            @for (int j = 0; j < Game.Board.ColumnCount; j++)
+                            {
+                                var tempI = i;
+                                var tempJ = j;
+                                var isDropzone = !Game.ShowHand && (card == null || card != null && j > 0 && Game.Board[i, j - 1] != null && Game.Board[i, j - 1].Equals(card));
+                                <div class="col-2 h-100 @(isDropzone ? "dropzone" : "")" ondragover="@(isDropzone ? "event.preventDefault();" : "")" @ondrop="() => CardPlayed(tempI, tempJ)">
+                                    <div class="card border rounded h-100">
+                                        @if (Game.Board[i, j] != null)
+                                        {
+                                            <CardInfo Card="Game.Board[i, j]" />
+                                        }
+                                    </div>
                                 </div>
-                            </div>
-                        }
-                    </div>
+                            }
+                        </div>
+                    }
                 }
             </div>
             <div class="col-3 col-md-2 h-100 pb-2">
@@ -90,7 +93,7 @@ else
                         }
                         else if (playerIndex == 0 && _draggedPlayingCardCoordinates != null)
                         {
-                            <div style="@($"position: fixed; left: {_draggedPlayingCardCoordinates.X}%; top: {_draggedPlayingCardCoordinates.Y}%; width: {_cardSize.X}px; height: {_cardSize.Y}px;")">
+                            <div style="@($"position: fixed; left: {_draggedPlayingCardCoordinates.X}%; top: {_draggedPlayingCardCoordinates.Y}%; width: {_cardSize?.Width}px; height: {_cardSize?.Height}px;")">
                                 <div class="card border rounded bg-light">
                                     <CardInfo Card="player.SelectedCard" PlayerName="@player.Name" />
                                 </div>
@@ -122,8 +125,8 @@ else
     private bool _urlWrong = false;
     private Coordinates _draggedPlayingCardCoordinates;
     private Coordinates _draggedPlayingCardOffset;
-    private Coordinates _scale;
-    private Coordinates _cardSize;
+    private Dimensions _screenSize;
+    private Dimensions _cardSize;
     private ElementReference _draggedCard;
 
     protected override async Task OnInitializedAsync()
@@ -145,7 +148,7 @@ else
             {
                 await ConfigureHubAsync();
             }
-            _scale = await JSRuntime.InvokeAsync<Coordinates>("sixnimmt.getScreenSize");
+            _screenSize = await JSRuntime.InvokeAsync<Dimensions>("sixnimmt.getScreenSize");
         }
     }
 
@@ -153,7 +156,7 @@ else
     {
         if (!firstRender && _cardSize == null)
         {
-            _cardSize = await JSRuntime.InvokeAsync<Coordinates>("sixnimmt.getCardSize");
+            _cardSize = await JSRuntime.InvokeAsync<Dimensions>("sixnimmt.getCardSize");
         }
     }
 
@@ -192,7 +195,7 @@ else
 
     private async Task BroadcastCoordinatesAsync(DragEventArgs e)
     {
-        var scaledPosition = new Coordinates { X = 100 * (e.ClientX + _draggedPlayingCardOffset.X) / _scale.X, Y = 100 * (e.ClientY + _draggedPlayingCardOffset.Y) / _scale.Y };
+        var scaledPosition = new Coordinates { X = 100 * (e.ClientX + _draggedPlayingCardOffset.X) / _screenSize.Width, Y = 100 * (e.ClientY + _draggedPlayingCardOffset.Y) / _screenSize.Height };
         await _hubConnection.InvokeAsync("BroadcastCoordinatesAsync", GameId, scaledPosition);
     }
 
@@ -204,27 +207,18 @@ else
 
     private async Task CardPlayed(int row, int column)
     {
-        var cardsInRow = new List<Card>();
-        for (int i = 0; i < Game.CardRows.GetLength(1); i++)
+        if (IdentifiedPlayer.SelectedCard < Game.Board.GetLastCardInRow(row) || column == Game.Board.ColumnCount - 1)
         {
-            if (Game.CardRows[row, i] != null)
+            Console.WriteLine("In here");
+            for (int i = 0; i <= Game.Board.GetLastCardIndexInRow(row); i++)
             {
-                cardsInRow.Add(Game.CardRows[row, i]);
+                IdentifiedPlayer.Points += Game.Board[row, i].Points;
+                Game.Board[row, i] = i == 0 ? IdentifiedPlayer.SelectedCard : null;
             }
-        }
-
-        if (IdentifiedPlayer.SelectedCard.Value < cardsInRow.Max(c => c.Value) || column == Game.CardRows.GetLength(1) - 1)
-        {
-            IdentifiedPlayer.Points += cardsInRow.Sum(c => c.Points);
-            for (int i = 1; i < cardsInRow.Count; i++)
-            {
-                Game.CardRows[row, i] = null;
-            }
-            Game.CardRows[row, 0] = IdentifiedPlayer.SelectedCard;
         }
         else
         {
-            Game.CardRows[row, column] = IdentifiedPlayer.SelectedCard;
+            Game.Board[row, column] = IdentifiedPlayer.SelectedCard;
         }
 
         IdentifiedPlayer.SelectedCard = null;
