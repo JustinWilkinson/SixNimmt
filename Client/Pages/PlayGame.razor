@@ -209,7 +209,6 @@ else
     {
         if (IdentifiedPlayer.SelectedCard < Game.Board.GetLastCardInRow(row) || column == Game.Board.ColumnCount - 1)
         {
-            Console.WriteLine("In here");
             for (int i = 0; i <= Game.Board.GetLastCardIndexInRow(row); i++)
             {
                 IdentifiedPlayer.Points += Game.Board[row, i].Points;
