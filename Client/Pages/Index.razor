@@ -1,6 +1,84 @@
 ﻿@page "/"
 
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+
 <h1>Welcome to 6 Nimmt! Online</h1>
 
 <p>An unofficial version of the card game 6 Nimmt!</p>
-<p>Click <NavLink href="@($"WaitingRoom/{Guid.NewGuid().ToString()}")" Match="NavLinkMatch.All">here</NavLink> to host a new game.</p>
+
+<div class="row pl-3">
+    <NavLink class="nav-link pl-0" href="@($"WaitingRoom/{Guid.NewGuid().ToString()}")" Match="NavLinkMatch.All">
+        <span class="oi oi-list-rich" aria-hidden="true"></span> Click here to host a new game...
+    </NavLink>
+</div>
+
+@if (_games == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="container-fluid">
+        <div class="row">
+            <h4>Games</h4>
+        </div>
+        <div class="row w-75">
+            <table id="GamesTable" class="table table-striped table-bordered w-100">
+                <thead>
+                    <tr>
+                        <th>Started</th>
+                        <th>Completed</th>
+                        <th>Number of Players</th>
+                        <th>Winner</th>
+                        <th>Link</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var game in _games.OrderByDescending(g => g.Started))
+                    {
+                        <tr>
+                            <td>@(game.Started?.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss") ?? "Not yet started")</td>
+                            <td>@(game.Ended?.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss") ?? "In Progress")</td>
+                            <td>@(game.Players?.Count ?? 0)</td>
+                            <td>@(game.Ended.HasValue ? game.Players.OrderBy(c => c.Points).First().Name.ToString() : "Undecided")</td>
+                            <td>
+                                @if (!game.Started.HasValue)
+                                {
+                                    <a href="WaitingRoom/@game.Id">
+                                        <span class="oi oi-list-rich" aria-hidden="true"></span> Join Game
+                                    </a>
+                                }
+                                else if (!game.Ended.HasValue)
+                                {
+                                    <span>Game in progress</span>
+                                }
+                                else
+                                {
+                                    <span>Game completed</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@code {
+    private IEnumerable<Game> _games;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _games = JsonConvert.DeserializeObject<IEnumerable<Game>>(await Http.GetStringAsync("api/Game/List"));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("sixnimmt.initialiseGamesDataTable");
+        }
+    }
+}

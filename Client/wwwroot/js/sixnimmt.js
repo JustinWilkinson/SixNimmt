@@ -14,5 +14,27 @@
             return { Width: parseFloat(styles.width), Height: parseFloat(styles.height) };
         }
         return null;
-    }
+    },
+    initialiseGamesDataTable: function () {
+        $('#GamesTable').DataTable({
+            retrieve: true,
+            paging: true,
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+            ordering: false,
+            columnDefs: [
+                {
+                    targets: 0,
+                    searchable: true
+                },
+                {
+                    targets: '_all',
+                    searchable: false
+                }
+            ],
+            language: {
+                info: "Showing _START_ to _END_ of _TOTAL_ games."
+            }
+        });
+    },
 }
