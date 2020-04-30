@@ -1,4 +1,9 @@
+using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using SixNimmt.Client.Services;
+using System;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace SixNimmt.Client
 {
