@@ -1,7 +1,7 @@
 ﻿@page "/PlayGame/{GameId}"
 
 @inject HttpClient Http
-@inject LocalStorage Storage
+@inject GameStorage Storage
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 
@@ -137,13 +137,13 @@ else
         {
             _urlWrong = true;
         }
-        else if (!Game.Started.HasValue || Storage.GetItem("gameId") != GameId)
+        else if (!Game.Started.HasValue || Storage.GameId != GameId)
         {
             NavigationManager.NavigateTo($"/WaitingRoom/{GameId}");
         }
         else
         {
-            IdentifiedPlayer = Game.Players.SingleOrDefault(x => x.Name == Storage.GetItem("playerName"));
+            IdentifiedPlayer = Game.Players.SingleOrDefault(x => x.Name == Storage.PlayerName);
             if (IdentifiedPlayer != null)
             {
                 await ConfigureHubAsync();
@@ -209,7 +209,8 @@ else
     {
         if (IdentifiedPlayer.SelectedCard < Game.Board.GetLastCardInRow(row) || column == Game.Board.ColumnCount - 1)
         {
-            for (int i = 0; i <= Game.Board.GetLastCardIndexInRow(row); i++)
+            var cardCount = Game.Board.GetLastCardIndexInRow(row);
+            for (int i = 0; i <= cardCount; i++)
             {
                 IdentifiedPlayer.Points += Game.Board[row, i].Points;
                 Game.Board[row, i] = i == 0 ? IdentifiedPlayer.SelectedCard : null;

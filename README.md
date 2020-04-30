@@ -23,5 +23,5 @@ An NUnit Test project containing tests for the solution.
 
 ### Docker Support
 * For hosting the application in a docker container, use the below steps.
-* To build the docker container run cd into the solution root folder, and run the following command: `docker build -t sixnimmt-server .`
-* The container can then be run using the following command `docker run -p 8080:80 sixnimmt-server`. Here, port 8080 on the host is mapped to port 80 in the container - this can be amended to taste.
+* To build the docker container run cd into the solution root folder, and run the following command: `docker build -t sixnimmt .`
+* The container can then be run using the following command `docker run -p 8080:80 sixnimmt`. Here, port 8080 on the host is mapped to port 80 in the container - this can be amended to taste.
