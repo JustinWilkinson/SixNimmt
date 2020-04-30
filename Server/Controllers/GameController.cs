@@ -63,7 +63,7 @@ namespace SixNimmt.Server.Controllers
                     if (oldSelectedCard != null)
                     {
                         player.Hand.Add(oldSelectedCard);
-                        player.Hand.Sort((c1, c2) => c1.Value.CompareTo(c2.Value));
+                        player.Hand.Sort();
                     }
                     if (newSelectedCard != null)
                     {

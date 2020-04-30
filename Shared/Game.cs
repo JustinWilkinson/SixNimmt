@@ -9,7 +9,7 @@ namespace SixNimmt.Shared
 
         public List<Player> Players { get; set; }
 
-        public Card[,] CardRows { get; set; }
+        public Board Board { get; set; }
 
         public bool ShowHand { get; set; }
 
@@ -26,13 +26,8 @@ namespace SixNimmt.Shared
             var deck = new Deck();
             deck.Shuffle();
             deck.Deal(Players);
-            Players.ForEach(x => x.Hand.Sort((c1, c2) => c1.Value.CompareTo(c2.Value)));
-
-            CardRows = new Card[rows, columns];
-            for (var i = 0; i < CardRows.GetLength(0); i++)
-            {
-                CardRows[i, 0] = deck.TopCard();
-            }
+            Players.ForEach(x => x.Hand.Sort());
+            Board = new Board(deck, rows, columns);
 
             Round++;
             RoundEnded = false;
