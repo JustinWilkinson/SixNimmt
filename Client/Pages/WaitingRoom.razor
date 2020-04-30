@@ -65,6 +65,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+
         if (Storage.GameId != GameId)
         {
             Storage.GameId = GameId;
@@ -75,7 +76,7 @@ else
         _game = JsonConvert.DeserializeObject<Game>(await Http.GetStringAsync($"api/Game/Get?id={GameId}"));
         if (_game == null)
         {
-            await Http.PutJsonAsync("api/Game/New", GameId);
+            await Http.PutAsJsonAsync("api/Game/New", GameId);
             _game = JsonConvert.DeserializeObject<Game>(await Http.GetStringAsync($"api/Game/Get?id={GameId}"));
             _player = _game.Players.Single();
         }
@@ -124,7 +125,7 @@ else
 
     private async Task JoinGameAsync()
     {
-        _player = await Http.PostJsonAsync<Player>($"api/Game/Join", GameId);
+        _player = await (await Http.PostAsJsonAsync($"api/Game/Join", GameId)).Content.ReadFromJsonAsync<Player>();
         _game.Players.Add(_player);
         await _hubConnection.InvokeAsync("UpdateGameAsync", GameId, JsonConvert.SerializeObject(_game));
     }
@@ -144,7 +145,7 @@ else
             else
             {
                 await Task.WhenAll(
-                    Http.PostJsonAsync("api/Game/UpdatePlayer", new { GameId = GameId, OldName = _player.Name, NewName = newName }),
+                    Http.PostAsJsonAsync("api/Game/UpdatePlayer", new { GameId = GameId, OldName = _player.Name, NewName = newName }),
                     _hubConnection.InvokeAsync("UpdatePlayerNameAsync", GameId, _player.Name, newName));
                 _player.Name = newName;
                 Storage.PlayerName = _player.Name;
@@ -155,7 +156,7 @@ else
 
     private async Task StartGameAsync()
     {
-        await Http.PostJsonAsync("api/Game/StartGame", GameId);
+        await Http.PostAsJsonAsync("api/Game/StartGame", GameId);
         await _hubConnection.InvokeAsync("StartGameAsync", GameId);
         NavigationManager.NavigateTo($"PlayGame/{GameId}");
     }

@@ -1,7 +1,4 @@
-using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.Extensions.DependencyInjection;
 using SixNimmt.Client.Services;
-using System.Threading.Tasks;
 
 namespace SixNimmt.Client
 {
@@ -12,7 +9,7 @@ namespace SixNimmt.Client
             var builder = WebAssemblyHostBuilder.CreateDefault(args);
             builder.RootComponents.Add<App>("app");
 
-            builder.Services.AddBaseAddressHttpClient();
+            builder.Services.AddSingleton(new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
             builder.Services.AddGameStorage();
 
             await builder.Build().RunAsync();
