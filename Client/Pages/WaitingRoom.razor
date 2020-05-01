@@ -11,7 +11,7 @@
 }
 else if (_game.Started.HasValue)
 {
-    <p>Sorry, this game has been started by the host! Click here to host a new game. Click <NavLink href="@($"WaitingRoom/{Guid.NewGuid().ToString()}")" Match="NavLinkMatch.All">here</NavLink> to host a new game</p>
+    <p>Sorry, this game has been started by the host! <a href="" @onclick="HostNewGame">Click here to host a new game</a></p>
 }
 else
 {
@@ -65,7 +65,6 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-
         if (Storage.GameId != GameId)
         {
             Storage.GameId = GameId;
@@ -159,5 +158,10 @@ else
         await Http.PostAsJsonAsync("api/Game/StartGame", GameId);
         await _hubConnection.InvokeAsync("StartGameAsync", GameId);
         NavigationManager.NavigateTo($"PlayGame/{GameId}");
+    }
+
+    private void HostNewGame()
+    {
+        NavigationManager.NavigateTo($"WaitingRoom/{Guid.NewGuid().ToString()}", true);
     }
 }
