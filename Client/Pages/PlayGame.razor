@@ -18,7 +18,7 @@
 }
 else if (IdentifiedPlayer == null)
 {
-    <p>Sorry, it doesn't look like you're part of this game. Click <NavLink href="@($"WaitingRoom/{Guid.NewGuid().ToString()}")" Match="NavLinkMatch.All">here</NavLink> to host a new game</p>
+    <p>Sorry, it doesn't look like you're part of this game. <NavLink href="@($"WaitingRoom/{Guid.NewGuid().ToString()}")" Match="NavLinkMatch.All">Click here to host a new game</NavLink></p>
 }
 else
 {
@@ -223,7 +223,7 @@ else
 
         IdentifiedPlayer.SelectedCard = null;
         Game.ShowHand = Game.Players.All(p => p.SelectedCard == null);
-        Game.RoundEnded = Game.Players.All(p => p.Hand.Count == 0);
+        Game.RoundEnded = Game.ShowHand && Game.Players.All(p => p.Hand.Count == 0);
 
         if (Game.RoundEnded && Game.Players.Any(p => p.Points > 66))
         {

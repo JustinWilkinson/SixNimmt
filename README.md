@@ -22,6 +22,9 @@ An NUnit Test project containing tests for the solution.
 * Steps for hosting ASP.NET Core applications can be found [here](https://docs.microsoft.com/en-us/aspnet/core/host-and-deploy/?view=aspnetcore-3.1).
 
 ### Docker Support
-* For hosting the application in a docker container, use the below steps.
-* To build the docker container run cd into the solution root folder, and run the following command: `docker build -t sixnimmt .`
-* The container can then be run using the following command `docker run -p 8080:80 sixnimmt`. Here, port 8080 on the host is mapped to port 80 in the container - this can be amended to taste.
+* For hosting the application in a docker container, either:
+* Build your own container using the below commands
+  * To build the docker container run cd into the solution root folder, and run the following command: `docker build -t cryptonyms .`
+  * The container can then be run using the following command `docker run -p 8080:80 cryptonyms`. Here, port 8080 on the host is mapped to port 80 in the container - this can be amended to taste.
+* Download/Pull an existing image
+  * The latest docker image is available from  [GitHub](https://github.com/JustinWilkinson/Cryptonyms/packages).
