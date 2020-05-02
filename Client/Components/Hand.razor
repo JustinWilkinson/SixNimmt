@@ -54,15 +54,15 @@
         {
             draggedCard = IdentifiedPlayer.Hand[_draggedCardIndex];
             IdentifiedPlayer.Hand.RemoveAt(_draggedCardIndex);
+            AddToHand(newIndex, draggedCard);
         }
         else
         {
             draggedCard = IdentifiedPlayer.SelectedCard;
             IdentifiedPlayer.SelectedCard = null;
+            AddToHand(newIndex, draggedCard);
             await Parent.UpdateSelectedCardAsync();
         }
-
-        AddToHand(newIndex, draggedCard);
     }
 
     private async Task SelectCardAsync()
