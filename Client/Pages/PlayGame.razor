@@ -94,7 +94,7 @@ else
                         else if (playerIndex == 0 && _draggedPlayingCardCoordinates != null)
                         {
                             <div style="@($"position: fixed; left: {_draggedPlayingCardCoordinates.X}%; top: {_draggedPlayingCardCoordinates.Y}%; width: {_cardSize?.Width}px; height: {_cardSize?.Height}px;")">
-                                <div class="card border rounded bg-light">
+                                <div class="card border rounded h-100 bg-light">
                                     <CardInfo Card="player.SelectedCard" PlayerName="@player.Name" />
                                 </div>
                             </div>
