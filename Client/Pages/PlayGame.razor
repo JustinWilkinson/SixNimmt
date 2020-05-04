@@ -128,6 +128,7 @@ else
     private Dimensions _screenSize;
     private Dimensions _cardSize;
     private ElementReference _draggedCard;
+    private bool _runningOnFirefox;
 
     protected override async Task OnInitializedAsync()
     {
@@ -149,6 +150,7 @@ else
                 await ConfigureHubAsync();
             }
             _screenSize = await JSRuntime.InvokeAsync<Dimensions>("sixnimmt.getScreenSize");
+            _runningOnFirefox = await JSRuntime.InvokeAsync<bool>("sixnimmt.runningOnFirefox");
         }
     }
 
@@ -195,8 +197,8 @@ else
 
     private async Task BroadcastCoordinatesAsync(DragEventArgs e)
     {
-        var scaledPosition = new Coordinates { X = 100 * (e.ClientX + _draggedPlayingCardOffset.X) / _screenSize.Width, Y = 100 * (e.ClientY + _draggedPlayingCardOffset.Y) / _screenSize.Height };
-        await _hubConnection.InvokeAsync("BroadcastCoordinatesAsync", GameId, scaledPosition);
+        var coordinates = _runningOnFirefox ? await JSRuntime.InvokeAsync<Coordinates>("sixnimmt.getDocumentDragCoordinates", _draggedCard) : new Coordinates { X = e.ClientX, Y = e.ClientY };
+        await _hubConnection.InvokeAsync("BroadcastCoordinatesAsync", GameId, new Coordinates { X = 100 * (coordinates.X + _draggedPlayingCardOffset.X) / _screenSize.Width, Y = 100 * (coordinates.Y + _draggedPlayingCardOffset.Y) / _screenSize.Height });
     }
 
     private async Task StopDragAsync()

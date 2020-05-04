@@ -2,7 +2,7 @@
     getElementCoordinates: function (element) {
         let bounds = element.getBoundingClientRect();
         let parentStyles = window.getComputedStyle(element.parentElement);
-        return { X: bounds.left - parseFloat(parentStyles.paddingLeft), Y: bounds.top - parseFloat(parentStyles.paddingTop) }
+        return { X: bounds.left - parseFloat(parentStyles.paddingLeft), Y: bounds.top - parseFloat(parentStyles.paddingTop) };
     },
     getScreenSize: function () {
         return { Width: window.innerWidth, Height: window.innerHeight }
@@ -37,4 +37,17 @@
             }
         });
     },
+    runningOnFirefox: function () {
+        let isFirefox = navigator.userAgent.indexOf('Firefox') !== -1;
+        if (isFirefox) {
+            $(document).on('dragover', function (event) {
+                $(document).data('dragX', event.originalEvent.clientX);
+                $(document).data('dragY', event.originalEvent.clientY);
+            });
+        }
+        return isFirefox;
+    },
+    getDocumentDragCoordinates: function () {
+        return { X: $(document).data('dragX'), Y: $(document).data('dragY') }
+    }
 }
