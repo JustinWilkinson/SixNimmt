@@ -175,6 +175,10 @@ else
         _hubConnection.On<string, Card>("PlayerSelectedCard", (playerName, card) =>
         {
             var player = Game.Players.Single(p => p.Name == playerName);
+            if (player.SelectedCard != null)
+            {
+                player.Hand.Add(player.SelectedCard);
+            }
             player.SelectedCard = card;
             player.Hand.Remove(card);
             Game.ShowHand = Game.Players.Any(p => p.SelectedCard == null);
@@ -270,8 +274,8 @@ else
     public async Task UpdateSelectedCardAsync()
     {
         await Task.WhenAll(
-        Http.PostAsJsonAsync("api/Game/SelectCard", new { GameId = Game.Id, PlayerName = IdentifiedPlayer.Name, Card = JsonConvert.SerializeObject(IdentifiedPlayer.SelectedCard) }),
-        _hubConnection.InvokeAsync("PlayerSelectedCardAsync", Game.Id, IdentifiedPlayer.Name, IdentifiedPlayer.SelectedCard));
+            Http.PostAsJsonAsync("api/Game/SelectCard", new { GameId = Game.Id, PlayerName = IdentifiedPlayer.Name, Card = JsonConvert.SerializeObject(IdentifiedPlayer.SelectedCard) }),
+            _hubConnection.InvokeAsync("PlayerSelectedCardAsync", Game.Id, IdentifiedPlayer.Name, IdentifiedPlayer.SelectedCard));
         StateHasChanged();
     }
 }
