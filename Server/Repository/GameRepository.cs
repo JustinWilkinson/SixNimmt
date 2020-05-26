@@ -21,6 +21,8 @@ namespace SixNimmt.Server.Repository
         void ModifyGame(string gameId, Action<Game> action);
 
         T ModifyGame<T>(string gameId, Func<Game, T> function);
+
+        void DeleteGames(IEnumerable<Guid> gameIdsToDelete);
     }
 
     public class GameRepository : Repository, IGameRepository
@@ -94,46 +96,96 @@ namespace SixNimmt.Server.Repository
 
         public void ModifyGame(string gameId, Action<Game> action)
         {
-            ExecuteInTransaction(connection =>
+            try
             {
-                var selectCommand = new SQLiteCommand("SELECT GameJson FROM Games WHERE Id = @Id;", connection);
-                selectCommand.AddParameter("@Id", gameId);
-                using var reader = selectCommand.ExecuteReader();
-                if (reader.Read())
+                ExecuteInTransaction(connection =>
                 {
-                    var game = DeserializeColumn<Game>("GameJson")(reader);
-                    action(game);
-                    UpdateGame(connection, game);
-                }
-            });
+                    var selectCommand = new SQLiteCommand("SELECT GameJson FROM Games WHERE Id = @Id;", connection);
+                    selectCommand.AddParameter("@Id", gameId);
+                    using var reader = selectCommand.ExecuteReader();
+                    if (reader.Read())
+                    {
+                        var game = DeserializeColumn<Game>("GameJson")(reader);
+                        action(game);
+                        UpdateGame(connection, game);
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred modifying game '{gameId}'.");
+                throw;
+            }
         }
 
         public T ModifyGame<T>(string gameId, Func<Game, T> function)
         {
-            T returnValue = default;
-
-            ExecuteInTransaction(connection =>
+            try
             {
-                var selectCommand = new SQLiteCommand("SELECT GameJson FROM Games WHERE Id = @Id;", connection);
-                selectCommand.AddParameter("@Id", gameId);
-                using var reader = selectCommand.ExecuteReader();
-                if (reader.Read())
-                {
-                    var game = DeserializeColumn<Game>("GameJson")(reader);
-                    returnValue = function(game);
-                    UpdateGame(connection, game);
-                }
-            });
+                T returnValue = default;
 
-            return returnValue;
+                ExecuteInTransaction(connection =>
+                {
+                    var selectCommand = new SQLiteCommand("SELECT GameJson FROM Games WHERE Id = @Id;", connection);
+                    selectCommand.AddParameter("@Id", gameId);
+                    using var reader = selectCommand.ExecuteReader();
+                    if (reader.Read())
+                    {
+                        var game = DeserializeColumn<Game>("GameJson")(reader);
+                        returnValue = function(game);
+                        UpdateGame(connection, game);
+                    }
+                });
+
+                return returnValue;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred modifying game '{gameId}'.");
+                throw;
+            }
         }
 
         private void UpdateGame(SQLiteConnection connection, Game game)
         {
-            var updateCommand = new SQLiteCommand("UPDATE Games SET GameJson = @Json WHERE Id = @Id", connection);
-            updateCommand.AddParameter("@Id", game.Id);
-            updateCommand.AddParameter("@Json", game.Serialize());
-            updateCommand.ExecuteNonQuery();
+            try
+            {
+                var updateCommand = new SQLiteCommand("UPDATE Games SET GameJson = @Json WHERE Id = @Id", connection);
+                updateCommand.AddParameter("@Id", game.Id);
+                updateCommand.AddParameter("@Json", game.Serialize());
+                updateCommand.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred updating game '{game.Id}'.");
+                throw;
+            }
+        }
+
+        public void DeleteGames(IEnumerable<Guid> gameIdsToDelete)
+        {
+            try
+            {
+                ExecuteInTransaction(connection =>
+                {
+                    foreach (var id in gameIdsToDelete)
+                    {
+                        var selectCommand = new SQLiteCommand("DELETE FROM Games WHERE Id = @Id;", connection);
+                        selectCommand.AddParameter("@Id", id);
+                        using var reader = selectCommand.ExecuteReader();
+                        if (reader.Read())
+                        {
+                            var game = DeserializeColumn<Game>("GameJson")(reader);
+                            UpdateGame(connection, game);
+                        }
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred deleting old games.");
+                throw;
+            }
         }
     }
 }
