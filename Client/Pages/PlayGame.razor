@@ -1,9 +1,10 @@
 ﻿@page "/PlayGame/{GameId}"
 
-@inject HttpClient Http
+@inject IHttpService Http
 @inject GameStorage Storage
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
+@inject GameHubCommunicator GameHub
 
 @if (Game == null)
 {
@@ -18,14 +19,14 @@
 }
 else if (IdentifiedPlayer == null)
 {
-    <p>Sorry, it doesn't look like you're part of this game. <NavLink href="@($"WaitingRoom/{Guid.NewGuid().ToString()}")" Match="NavLinkMatch.All">Click here to host a new game</NavLink></p>
+    <p>Sorry, it doesn't look like you're part of this game. <NavLink href="NewGame" Match="NavLinkMatch.All">Click here to host a new game</NavLink></p>
 }
 else
 {
-    <Modal Header="Game Over" Show="Game.Ended.HasValue" Closable="true">
+    <Modal Header="Game Over" Show="Game.CompletedAtUtc.HasValue" Closable="true">
         @GetWinner()
     </Modal>
-    <Modal Header="Round Ended" Show="!Game.Ended.HasValue && Game.RoundEnded" Closable="false">
+    <Modal Header="Round Ended" Show="!Game.CompletedAtUtc.HasValue && Game.RoundEnded" Closable="false">
         @if (IdentifiedPlayer.IsHost)
         {
             <div class="row">
@@ -56,7 +57,7 @@ else
                                 var tempJ = j;
                                 var isDropzone = !Game.ShowHand && (card == null || card != null && j > 0 && Game.Board[i, j - 1] != null && Game.Board[i, j - 1].Equals(card));
                                 <div class="col-2 h-100 @(isDropzone ? "dropzone" : "")" ondragover="@(isDropzone ? "event.preventDefault();" : "")" @ondrop="() => CardPlayed(tempI, tempJ)">
-                                    <div class="card border rounded h-100">
+                                    <div class="card border rounded h-100 @(IdentifiedPlayer.SelectedCard != null && isDropzone ? "border-primary" : (j == Game.Board.ColumnCount - 1 ? "border-danger" : ""))">
                                         @if (Game.Board[i, j] != null)
                                         {
                                             <CardInfo Card="Game.Board[i, j]" />
@@ -120,8 +121,6 @@ else
     public Player IdentifiedPlayer { get; set; }
     public Game Game { get; private set; }
 
-    private HubConnection _hubConnection;
-
     private bool _urlWrong = false;
     private Coordinates _draggedPlayingCardCoordinates;
     private Coordinates _draggedPlayingCardOffset;
@@ -132,13 +131,13 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        Game = JsonConvert.DeserializeObject<Game>(await Http.GetStringAsync($"api/Game/Get?id={GameId}"));
+        Game = await Http.GetAsync<Game>($"api/Game/Get?id={GameId}");
 
         if (Game == null)
         {
             _urlWrong = true;
         }
-        else if (!Game.Started.HasValue || Storage.GameId != GameId)
+        else if (!Game.StartedAtUtc.HasValue || Storage.GameId != GameId)
         {
             NavigationManager.NavigateTo($"/WaitingRoom/{GameId}");
         }
@@ -164,15 +163,14 @@ else
 
     private async Task ConfigureHubAsync()
     {
-        _hubConnection = new HubConnectionBuilder().WithUrl(NavigationManager.ToAbsoluteUri("/GameHub")).WithAutomaticReconnect().Build();
-        _hubConnection.On<string>("UpdateGame", updatedGame =>
+        GameHub.RegisterHandler("UpdateGame", async () =>
         {
-            Game = JsonConvert.DeserializeObject<Game>(updatedGame);
+            Game = await Http.GetAsync<Game>($"api/Game/Get?id={GameId}");
             IdentifiedPlayer = Game.Players.Single(x => x.Name == IdentifiedPlayer.Name);
             _draggedPlayingCardCoordinates = null;
             StateHasChanged();
         });
-        _hubConnection.On<string, Card>("PlayerSelectedCard", (playerName, card) =>
+        GameHub.RegisterHandler<string, Card>("PlayerSelectedCard", (playerName, card) =>
         {
             var player = Game.Players.Single(p => p.Name == playerName);
             if (player.SelectedCard != null)
@@ -184,13 +182,13 @@ else
             Game.ShowHand = Game.Players.Any(p => p.SelectedCard == null);
             StateHasChanged();
         });
-        _hubConnection.On<Coordinates>("CoordinatesReceived", (coordinates) =>
+        GameHub.RegisterHandler<Coordinates>("CoordinatesReceived", (coordinates) =>
         {
             _draggedPlayingCardCoordinates = coordinates;
             StateHasChanged();
         });
-        await _hubConnection.StartAsync();
-        await _hubConnection.InvokeAsync("AddToGroupAsync", GameId);
+        await GameHub.StartAsync();
+        await GameHub.AddToGroupAsync(GameId);
     }
 
     private async Task StartDragAsync(DragEventArgs e)
@@ -202,13 +200,13 @@ else
     private async Task BroadcastCoordinatesAsync(DragEventArgs e)
     {
         var coordinates = _runningOnFirefox ? await JSRuntime.InvokeAsync<Coordinates>("sixnimmt.getDocumentDragCoordinates", _draggedCard) : new Coordinates { X = e.ClientX, Y = e.ClientY };
-        await _hubConnection.InvokeAsync("BroadcastCoordinatesAsync", GameId, new Coordinates { X = 100 * (coordinates.X + _draggedPlayingCardOffset.X) / _screenSize.Width, Y = 100 * (coordinates.Y + _draggedPlayingCardOffset.Y) / _screenSize.Height });
+        await GameHub.BroadcastCoordinatesAsync(GameId, new Coordinates { X = 100 * (coordinates.X + _draggedPlayingCardOffset.X) / _screenSize.Width, Y = 100 * (coordinates.Y + _draggedPlayingCardOffset.Y) / _screenSize.Height });
     }
 
     private async Task StopDragAsync()
     {
         _draggedPlayingCardOffset = null;
-        await _hubConnection.InvokeAsync("BroadcastCoordinatesAsync", GameId, null);
+        await GameHub.BroadcastCoordinatesAsync(GameId, null);
     }
 
     private async Task CardPlayed(int row, int column)
@@ -231,9 +229,9 @@ else
         Game.ShowHand = Game.Players.All(p => p.SelectedCard == null);
         Game.RoundEnded = Game.ShowHand && Game.Players.All(p => p.Hand.Count == 0);
 
-        if (Game.RoundEnded && Game.Players.Any(p => p.Points > 66))
+        if (Game.RoundEnded && Game.Players.Any(p => p.Points >= 66))
         {
-            Game.Ended = DateTime.UtcNow;
+            Game.CompletedAtUtc = DateTime.UtcNow;
         }
 
         await UpdateGameAsync();
@@ -247,14 +245,13 @@ else
 
     private async Task EndGameAsync()
     {
-        Game.Ended = DateTime.UtcNow;
+        Game.CompletedAtUtc = DateTime.UtcNow;
         await UpdateGameAsync();
     }
 
     private async Task UpdateGameAsync()
     {
-        var serializedGame = JsonConvert.SerializeObject(Game);
-        await Task.WhenAll(Http.PostAsJsonAsync("api/Game/Save", serializedGame), _hubConnection.InvokeAsync("UpdateGameAsync", GameId, serializedGame));
+        await Task.WhenAll(Http.PostAsync("api/Game/Save", Game.Serialize()), GameHub.UpdateGameAsync(GameId));
     }
 
     private string GetWinner()
@@ -274,8 +271,8 @@ else
     public async Task UpdateSelectedCardAsync()
     {
         await Task.WhenAll(
-            Http.PostAsJsonAsync("api/Game/SelectCard", new { GameId = Game.Id, PlayerName = IdentifiedPlayer.Name, Card = JsonConvert.SerializeObject(IdentifiedPlayer.SelectedCard) }),
-            _hubConnection.InvokeAsync("PlayerSelectedCardAsync", Game.Id, IdentifiedPlayer.Name, IdentifiedPlayer.SelectedCard));
+            Http.PostAsync("api/Game/SelectCard", new { GameId = Game.Id, PlayerName = IdentifiedPlayer.Name, Card = IdentifiedPlayer.SelectedCard.Serialize() }),
+            GameHub.PlayerSelectedCardAsync(GameId, IdentifiedPlayer.Name, IdentifiedPlayer.SelectedCard));
         StateHasChanged();
     }
 }

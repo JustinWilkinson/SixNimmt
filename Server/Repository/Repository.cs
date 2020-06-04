@@ -1,4 +1,4 @@
-﻿using SixNimmt.Server.Extensions;
+﻿using SixNimmt.Shared.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Data;
