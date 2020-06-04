@@ -1,6 +1,7 @@
 ﻿@page "/WaitingRoom/{GameId}"
 
-@inject HttpClient Http
+@inject IHttpService Http
+@inject GameHubCommunicator GameHub
 @inject GameStorage Storage
 @inject NavigationManager NavigationManager
 
@@ -57,8 +58,6 @@ else
     [Parameter]
     public string GameId { get; set; }
 
-    private HubConnection _hubConnection;
-
     private Game _game;
     private Player _player;
     private string _newNameValidationMessage;
@@ -72,14 +71,14 @@ else
         }
 
         await ConfigureHubAsync();
-        _game = JsonConvert.DeserializeObject<Game>(await Http.GetStringAsync($"api/Game/Get?id={GameId}"));
+        _game = await Http.GetAsync<Game>($"api/Game/Get?id={GameId}");
         if (_game == null)
         {
-            await Http.PutAsJsonAsync("api/Game/New", GameId);
-            _game = JsonConvert.DeserializeObject<Game>(await Http.GetStringAsync($"api/Game/Get?id={GameId}"));
+            await Http.PutAsync("api/Game/New", GameId);
+            _game = await Http.GetAsync<Game>($"api/Game/Get?id={GameId}");
             _player = _game.Players.Single();
         }
-        else if (_game.Started.HasValue )
+        else if (_game.Started.HasValue)
         {
             return;
         }
@@ -106,27 +105,26 @@ else
 
     private async Task ConfigureHubAsync()
     {
-        _hubConnection = new HubConnectionBuilder().WithUrl(NavigationManager.ToAbsoluteUri("/GameHub")).WithAutomaticReconnect().Build();
-        _hubConnection.On<string>("UpdateGame", updatedGame =>
+        GameHub.RegisterHandler<string>("UpdateGame", updatedGame =>
         {
-            _game = JsonConvert.DeserializeObject<Game>(updatedGame);
+            _game = updatedGame.Deserialize<Game>();
             StateHasChanged();
         });
-        _hubConnection.On<string, string>("PlayerNameChanged", (oldName, newName) =>
+        GameHub.RegisterHandler<string, string>("PlayerNameChanged", (oldName, newName) =>
         {
             _game.Players.Single(x => x.Name == oldName).Name = newName;
             StateHasChanged();
         });
-        _hubConnection.On("GameStarted", () => NavigationManager.NavigateTo($"PlayGame/{GameId}"));
-        await _hubConnection.StartAsync();
-        await _hubConnection.InvokeAsync("AddToGroupAsync", GameId);
+        GameHub.RegisterHandler("GameStarted", () => NavigationManager.NavigateTo($"PlayGame/{GameId}"));
+        await GameHub.StartAsync();
+        await GameHub.AddToGroupAsync(GameId);
     }
 
     private async Task JoinGameAsync()
     {
-        _player = await (await Http.PostAsJsonAsync($"api/Game/Join", GameId)).Content.ReadFromJsonAsync<Player>();
+        _player = await Http.PostAsync<Player>($"api/Game/Join", GameId);
         _game.Players.Add(_player);
-        await _hubConnection.InvokeAsync("UpdateGameAsync", GameId, JsonConvert.SerializeObject(_game));
+        await GameHub.UpdateGameAsync(GameId, _game.Serialize());
     }
 
     private async Task ChangeNameAsync(string newName)
@@ -144,8 +142,8 @@ else
             else
             {
                 await Task.WhenAll(
-                    Http.PostAsJsonAsync("api/Game/UpdatePlayer", new { GameId = GameId, OldName = _player.Name, NewName = newName }),
-                    _hubConnection.InvokeAsync("UpdatePlayerNameAsync", GameId, _player.Name, newName));
+                    Http.PostAsync("api/Game/UpdatePlayer", new { GameId = GameId, OldName = _player.Name, NewName = newName }),
+                    GameHub.UpdatePlayerNameAsync(GameId, _player.Name, newName));
                 _player.Name = newName;
                 Storage.PlayerName = _player.Name;
                 _newNameValidationMessage = null;
@@ -155,13 +153,10 @@ else
 
     private async Task StartGameAsync()
     {
-        await Http.PostAsJsonAsync("api/Game/StartGame", GameId);
-        await _hubConnection.InvokeAsync("StartGameAsync", GameId);
+        await Http.PostAsync("api/Game/StartGame", GameId);
+        await GameHub.StartGameAsync(GameId);
         NavigationManager.NavigateTo($"PlayGame/{GameId}");
     }
 
-    private void HostNewGame()
-    {
-        NavigationManager.NavigateTo($"WaitingRoom/{Guid.NewGuid().ToString()}", true);
-    }
+    private void HostNewGame() => NavigationManager.NavigateTo($"WaitingRoom/{Guid.NewGuid().ToString()}", true);
 }

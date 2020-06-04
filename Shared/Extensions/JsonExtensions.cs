@@ -2,7 +2,7 @@
 using Newtonsoft.Json.Linq;
 using System.Text.Json;
 
-namespace SixNimmt.Server.Extensions
+namespace SixNimmt.Shared.Extensions
 {
     public static class JsonExtensions
     {

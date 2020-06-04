@@ -1,10 +1,10 @@
-using SixNimmt.Server.Extensions;
 using Newtonsoft.Json;
 using NUnit.Framework;
+using SixNimmt.Shared.Extensions;
 using System.Text.Json;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
-namespace SixNimmt.Test.Server.Extensions
+namespace SixNimmt.Test.Shared.Extensions
 {
     [TestFixture]
     public class JsonExtensionsTest

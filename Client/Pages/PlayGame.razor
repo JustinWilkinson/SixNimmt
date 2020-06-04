@@ -1,6 +1,6 @@
 ﻿@page "/PlayGame/{GameId}"
 
-@inject HttpClient Http
+@inject IHttpService Http
 @inject GameStorage Storage
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
@@ -132,7 +132,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        Game = JsonConvert.DeserializeObject<Game>(await Http.GetStringAsync($"api/Game/Get?id={GameId}"));
+        Game = await Http.GetAsync<Game>($"api/Game/Get?id={GameId}");
 
         if (Game == null)
         {
@@ -167,7 +167,7 @@ else
         _hubConnection = new HubConnectionBuilder().WithUrl(NavigationManager.ToAbsoluteUri("/GameHub")).WithAutomaticReconnect().Build();
         _hubConnection.On<string>("UpdateGame", updatedGame =>
         {
-            Game = JsonConvert.DeserializeObject<Game>(updatedGame);
+            Game = updatedGame.Deserialize<Game>();
             IdentifiedPlayer = Game.Players.Single(x => x.Name == IdentifiedPlayer.Name);
             _draggedPlayingCardCoordinates = null;
             StateHasChanged();
@@ -253,8 +253,8 @@ else
 
     private async Task UpdateGameAsync()
     {
-        var serializedGame = JsonConvert.SerializeObject(Game);
-        await Task.WhenAll(Http.PostAsJsonAsync("api/Game/Save", serializedGame), _hubConnection.InvokeAsync("UpdateGameAsync", GameId, serializedGame));
+        var serializedGame = Game.Serialize();
+        await Task.WhenAll(Http.PostAsync("api/Game/Save", serializedGame), _hubConnection.InvokeAsync("UpdateGameAsync", GameId, serializedGame));
     }
 
     private string GetWinner()
@@ -274,7 +274,7 @@ else
     public async Task UpdateSelectedCardAsync()
     {
         await Task.WhenAll(
-            Http.PostAsJsonAsync("api/Game/SelectCard", new { GameId = Game.Id, PlayerName = IdentifiedPlayer.Name, Card = JsonConvert.SerializeObject(IdentifiedPlayer.SelectedCard) }),
+            Http.PostAsync("api/Game/SelectCard", new { GameId = Game.Id, PlayerName = IdentifiedPlayer.Name, Card = IdentifiedPlayer.SelectedCard.Serialize() }),
             _hubConnection.InvokeAsync("PlayerSelectedCardAsync", Game.Id, IdentifiedPlayer.Name, IdentifiedPlayer.SelectedCard));
         StateHasChanged();
     }
