@@ -66,7 +66,7 @@ else
     <div class="row w-100 pl-3">
         @if (_player.IsHost)
         {
-            <button class="btn btn-success" disabled="@(_game.Players.Count < 1)" @onclick="StartGameAsync">Start Game</button>
+            <button class="btn btn-success" disabled="@(_game.Players.Count < 2)" @onclick="StartGameAsync">Start Game</button>
         }
         else
         {
