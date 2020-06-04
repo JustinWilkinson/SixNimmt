@@ -11,11 +11,11 @@ namespace SixNimmt.Server.Repository
 {
     public interface IGameRepository
     {
-        void CreateGame(Game game);
+        void CreateGame(Game game, bool privateGame);
 
         Game GetGame(string id);
 
-        IEnumerable<Game> ListGames();
+        IEnumerable<Game> ListGames(bool includePrivateGames);
 
         void Save(Game game);
 
@@ -35,13 +35,14 @@ namespace SixNimmt.Server.Repository
             _logger = logger;
         }
 
-        public void CreateGame(Game game)
+        public void CreateGame(Game game, bool privateGame)
         {
             try
             {
                 var command = new SQLiteCommand("INSERT INTO Games (Id, GameJson) VALUES(@Id, @Json)");
                 command.AddParameter("@Id", game.Id);
                 command.AddParameter("@Json", game.Serialize());
+                command.AddParameter("@Private", privateGame ? 1 : 0);
                 Execute(command);
             }
             catch (Exception ex)
@@ -66,11 +67,11 @@ namespace SixNimmt.Server.Repository
             }
         }
 
-        public IEnumerable<Game> ListGames()
+        public IEnumerable<Game> ListGames(bool includePrivateGames)
         {
             try
             {
-                return Execute("SELECT * FROM Games", DeserializeColumn<Game>("GameJson"));
+                return Execute($"SELECT * FROM Games{(includePrivateGames ? "" : " WHERE Private = 0")}", DeserializeColumn<Game>("GameJson"));
             }
             catch (Exception ex)
             {

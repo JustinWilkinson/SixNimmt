@@ -24,15 +24,15 @@ namespace SixNimmt.Server.Controllers
         }
 
         [HttpPut("New")]
-        public void New(JsonElement gameId)
+        public void New(JsonElement json)
         {
             _gameRepository.CreateGame(new Game
             {
-                Id = new Guid(gameId.GetString()),
-                Name = "Unnamed Game",
+                Id = new Guid(json.GetStringProperty("GameId")),
+                Name = json.GetStringProperty("GameName") ?? "Unnamed Game",
                 Players = new List<Player> { new Player { Name = "Host", IsHost = true, Hand = new List<Card>() } },
                 CreatedAtUtc = DateTime.UtcNow
-            });
+            }, json.GetBooleanProperty("PrivateGame"));
         }
 
         [HttpPost("Join")]
@@ -84,7 +84,7 @@ namespace SixNimmt.Server.Controllers
         public string Get(string id) => _gameRepository.GetGame(id).Serialize();
 
         [HttpGet("List")]
-        public string List() => _gameRepository.ListGames().Serialize();
+        public string List() => _gameRepository.ListGames(false).Serialize();
 
         [HttpPost("StartGame")]
         public void StartGame(JsonElement gameIdJson) => _gameRepository.ModifyGame(gameIdJson.GetString(), game => game.StartGame());

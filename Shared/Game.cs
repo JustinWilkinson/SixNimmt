@@ -5,9 +5,9 @@ namespace SixNimmt.Shared
 {
     public class Game
     {
-        public string Name { get; set; }
-
         public Guid Id { get; set; }
+
+        public string Name { get; set; }
 
         public List<Player> Players { get; set; }
 
