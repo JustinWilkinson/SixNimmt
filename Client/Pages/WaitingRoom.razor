@@ -21,6 +21,10 @@ else if (_game.StartedAtUtc.HasValue)
 {
     <p>Sorry, this game has been started by the host! <NavLink href="NewGame" Match="NavLinkMatch.All">Click here to host a new game</NavLink></p>
 }
+else if (_showGameFull)
+{
+    <p>Sorry, this game has reached the maximum of 10 players for a game of this type. <NavLink href="NewGame" Match="NavLinkMatch.All">Click here to host a new game</NavLink></p>
+}
 else
 {
     <p>Distribute this URL to any players. You can edit your player name using the input box in the table.</p>
@@ -83,6 +87,7 @@ else
     private Player _player;
     private string _newNameValidationMessage;
     private bool _urlWrong;
+    private bool _showGameFull;
 
     protected override async Task OnInitializedAsync()
     {
@@ -124,7 +129,7 @@ else
                     }
                 }
 
-                Storage.PlayerName = _player.Name;
+                Storage.PlayerName = _player?.Name;
             }
         }
         else
@@ -159,8 +164,15 @@ else
     private async Task JoinGameAsync()
     {
         _player = await Http.PostAsync<Player>($"api/Game/Join", GameId);
-        _game.Players.Add(_player);
-        await GameHub.UpdateGameAsync(GameId);
+        if (_player != null)
+        {
+            _game.Players.Add(_player);
+            await GameHub.UpdateGameAsync(GameId);
+        }
+        else
+        {
+            _showGameFull = true;
+        }
     }
 
     private async Task ChangeNameAsync(string newName)

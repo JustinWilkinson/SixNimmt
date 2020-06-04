@@ -31,7 +31,8 @@ namespace SixNimmt.Server.Controllers
                 Id = new Guid(json.GetStringProperty("GameId")),
                 Name = json.GetStringProperty("GameName") ?? "Unnamed Game",
                 Players = new List<Player>(),
-                CreatedAtUtc = DateTime.UtcNow
+                CreatedAtUtc = DateTime.UtcNow,
+                VariableCardCount = json.GetBooleanProperty("VariableCardCount")
             }, json.GetBooleanProperty("PrivateGame"));
         }
 
@@ -42,9 +43,17 @@ namespace SixNimmt.Server.Controllers
             {
                 var playerCount = game.Players.Count;
                 var isHost = playerCount == 0;
-                var player = new Player { Name = isHost ? "Host" : $"Guest {playerCount}", Hand = new List<Card>(), IsHost = isHost };
-                game.Players.Add(player);
-                return player;
+
+                if (playerCount == 10 && !game.VariableCardCount)
+                {
+                    return null;
+                }
+                else
+                {
+                    var player = new Player { Name = isHost ? "Host" : $"Guest {playerCount}", Hand = new List<Card>(), IsHost = isHost };
+                    game.Players.Add(player);
+                    return player;
+                }
             });
         }
 

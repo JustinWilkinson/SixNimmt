@@ -9,6 +9,8 @@ namespace SixNimmt.Shared
 
         public string Name { get; set; }
 
+        public bool VariableCardCount { get; set; }
+
         public List<Player> Players { get; set; }
 
         public Board Board { get; set; }
@@ -27,7 +29,7 @@ namespace SixNimmt.Shared
 
         public void StartRound(int rows = 4, int columns = 6)
         {
-            var deck = new Deck();
+            var deck = VariableCardCount ? new Deck(10 * Players.Count + 4) : new Deck();
             deck.Shuffle();
             deck.Deal(Players);
             Players.ForEach(x => x.Hand.Sort());
