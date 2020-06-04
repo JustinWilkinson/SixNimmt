@@ -229,7 +229,7 @@ else
         Game.ShowHand = Game.Players.All(p => p.SelectedCard == null);
         Game.RoundEnded = Game.ShowHand && Game.Players.All(p => p.Hand.Count == 0);
 
-        if (Game.RoundEnded && Game.Players.Any(p => p.Points > 66))
+        if (Game.RoundEnded && Game.Players.Any(p => p.Points >= 66))
         {
             Game.Ended = DateTime.UtcNow;
         }
