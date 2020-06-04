@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using SixNimmt.Server.Extensions;
 using SixNimmt.Server.Repository;
 using SixNimmt.Shared;
+using SixNimmt.Shared.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;

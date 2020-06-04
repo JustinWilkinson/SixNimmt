@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using SixNimmt.Server.Extensions;
 using SixNimmt.Shared;
+using SixNimmt.Shared.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
