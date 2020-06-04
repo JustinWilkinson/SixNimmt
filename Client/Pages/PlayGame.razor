@@ -57,7 +57,7 @@ else
                                 var tempJ = j;
                                 var isDropzone = !Game.ShowHand && (card == null || card != null && j > 0 && Game.Board[i, j - 1] != null && Game.Board[i, j - 1].Equals(card));
                                 <div class="col-2 h-100 @(isDropzone ? "dropzone" : "")" ondragover="@(isDropzone ? "event.preventDefault();" : "")" @ondrop="() => CardPlayed(tempI, tempJ)">
-                                    <div class="card border rounded h-100">
+                                    <div class="card border rounded h-100 @(IdentifiedPlayer.SelectedCard != null && isDropzone ? "border-primary" : (j == Game.Board.ColumnCount - 1 ? "border-danger" : ""))">
                                         @if (Game.Board[i, j] != null)
                                         {
                                             <CardInfo Card="Game.Board[i, j]" />
