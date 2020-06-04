@@ -4,6 +4,7 @@
 @inject GameStorage Storage
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
+@inject GameHubCommunicator GameHub
 
 @if (Game == null)
 {
@@ -120,8 +121,6 @@ else
     public Player IdentifiedPlayer { get; set; }
     public Game Game { get; private set; }
 
-    private HubConnection _hubConnection;
-
     private bool _urlWrong = false;
     private Coordinates _draggedPlayingCardCoordinates;
     private Coordinates _draggedPlayingCardOffset;
@@ -164,15 +163,14 @@ else
 
     private async Task ConfigureHubAsync()
     {
-        _hubConnection = new HubConnectionBuilder().WithUrl(NavigationManager.ToAbsoluteUri("/GameHub")).WithAutomaticReconnect().Build();
-        _hubConnection.On<string>("UpdateGame", updatedGame =>
+        GameHub.RegisterHandler<string>("UpdateGame", updatedGame =>
         {
             Game = updatedGame.Deserialize<Game>();
             IdentifiedPlayer = Game.Players.Single(x => x.Name == IdentifiedPlayer.Name);
             _draggedPlayingCardCoordinates = null;
             StateHasChanged();
         });
-        _hubConnection.On<string, Card>("PlayerSelectedCard", (playerName, card) =>
+        GameHub.RegisterHandler<string, Card>("PlayerSelectedCard", (playerName, card) =>
         {
             var player = Game.Players.Single(p => p.Name == playerName);
             if (player.SelectedCard != null)
@@ -184,13 +182,13 @@ else
             Game.ShowHand = Game.Players.Any(p => p.SelectedCard == null);
             StateHasChanged();
         });
-        _hubConnection.On<Coordinates>("CoordinatesReceived", (coordinates) =>
+        GameHub.RegisterHandler<Coordinates>("CoordinatesReceived", (coordinates) =>
         {
             _draggedPlayingCardCoordinates = coordinates;
             StateHasChanged();
         });
-        await _hubConnection.StartAsync();
-        await _hubConnection.InvokeAsync("AddToGroupAsync", GameId);
+        await GameHub.StartAsync();
+        await GameHub.AddToGroupAsync(GameId);
     }
 
     private async Task StartDragAsync(DragEventArgs e)
@@ -202,13 +200,13 @@ else
     private async Task BroadcastCoordinatesAsync(DragEventArgs e)
     {
         var coordinates = _runningOnFirefox ? await JSRuntime.InvokeAsync<Coordinates>("sixnimmt.getDocumentDragCoordinates", _draggedCard) : new Coordinates { X = e.ClientX, Y = e.ClientY };
-        await _hubConnection.InvokeAsync("BroadcastCoordinatesAsync", GameId, new Coordinates { X = 100 * (coordinates.X + _draggedPlayingCardOffset.X) / _screenSize.Width, Y = 100 * (coordinates.Y + _draggedPlayingCardOffset.Y) / _screenSize.Height });
+        await GameHub.BroadcastCoordinatesAsync(GameId, new Coordinates { X = 100 * (coordinates.X + _draggedPlayingCardOffset.X) / _screenSize.Width, Y = 100 * (coordinates.Y + _draggedPlayingCardOffset.Y) / _screenSize.Height });
     }
 
     private async Task StopDragAsync()
     {
         _draggedPlayingCardOffset = null;
-        await _hubConnection.InvokeAsync("BroadcastCoordinatesAsync", GameId, null);
+        await GameHub.BroadcastCoordinatesAsync(GameId, null);
     }
 
     private async Task CardPlayed(int row, int column)
@@ -254,7 +252,7 @@ else
     private async Task UpdateGameAsync()
     {
         var serializedGame = Game.Serialize();
-        await Task.WhenAll(Http.PostAsync("api/Game/Save", serializedGame), _hubConnection.InvokeAsync("UpdateGameAsync", GameId, serializedGame));
+        await Task.WhenAll(Http.PostAsync("api/Game/Save", serializedGame), GameHub.UpdateGameAsync(GameId, serializedGame));
     }
 
     private string GetWinner()
@@ -275,7 +273,7 @@ else
     {
         await Task.WhenAll(
             Http.PostAsync("api/Game/SelectCard", new { GameId = Game.Id, PlayerName = IdentifiedPlayer.Name, Card = IdentifiedPlayer.SelectedCard.Serialize() }),
-            _hubConnection.InvokeAsync("PlayerSelectedCardAsync", Game.Id, IdentifiedPlayer.Name, IdentifiedPlayer.SelectedCard));
+            GameHub.PlayerSelectedCardAsync(GameId, IdentifiedPlayer.Name, IdentifiedPlayer.SelectedCard));
         StateHasChanged();
     }
 }
