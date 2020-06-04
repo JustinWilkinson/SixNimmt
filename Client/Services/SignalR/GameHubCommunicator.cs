@@ -22,7 +22,7 @@ namespace SixNimmt.Client.Services.SignalR
 
         public async Task NewGameAddedAsync() => await _hubConnection.InvokeAsync("NewGameAddedAsync");
 
-        public async Task UpdateGameAsync(string gameId, string updatedGame) => await _hubConnection.InvokeAsync("UpdateGameAsync", gameId, updatedGame);
+        public async Task UpdateGameAsync(string gameId) => await _hubConnection.InvokeAsync("UpdateGameAsync", gameId);
 
         public async Task UpdatePlayerNameAsync(string gameId, string oldName, string newName) => await _hubConnection.InvokeAsync("UpdatePlayerNameAsync", gameId, oldName, newName);
 

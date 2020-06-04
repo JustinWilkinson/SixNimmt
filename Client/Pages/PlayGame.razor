@@ -19,7 +19,7 @@
 }
 else if (IdentifiedPlayer == null)
 {
-    <p>Sorry, it doesn't look like you're part of this game. <NavLink href="@($"WaitingRoom/{Guid.NewGuid().ToString()}")" Match="NavLinkMatch.All">Click here to host a new game</NavLink></p>
+    <p>Sorry, it doesn't look like you're part of this game. <NavLink href="NewGame" Match="NavLinkMatch.All">Click here to host a new game</NavLink></p>
 }
 else
 {
@@ -163,9 +163,9 @@ else
 
     private async Task ConfigureHubAsync()
     {
-        GameHub.RegisterHandler<string>("UpdateGame", updatedGame =>
+        GameHub.RegisterHandler("UpdateGame", async () =>
         {
-            Game = updatedGame.Deserialize<Game>();
+            Game = await Http.GetAsync<Game>($"api/Game/Get?id={GameId}");
             IdentifiedPlayer = Game.Players.Single(x => x.Name == IdentifiedPlayer.Name);
             _draggedPlayingCardCoordinates = null;
             StateHasChanged();
@@ -251,8 +251,7 @@ else
 
     private async Task UpdateGameAsync()
     {
-        var serializedGame = Game.Serialize();
-        await Task.WhenAll(Http.PostAsync("api/Game/Save", serializedGame), GameHub.UpdateGameAsync(GameId, serializedGame));
+        await Task.WhenAll(Http.PostAsync("api/Game/Save", Game.Serialize()), GameHub.UpdateGameAsync(GameId));
     }
 
     private string GetWinner()

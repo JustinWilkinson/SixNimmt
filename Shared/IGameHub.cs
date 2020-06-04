@@ -6,7 +6,7 @@ namespace SixNimmt.Shared
     {
         Task AddToGroupAsync(string groupId);
 
-        Task UpdateGameAsync(string gameId, string updatedGame);
+        Task UpdateGameAsync(string gameId);
 
         Task UpdatePlayerNameAsync(string gameId, string oldName, string newName);
 

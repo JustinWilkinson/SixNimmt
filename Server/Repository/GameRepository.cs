@@ -30,7 +30,7 @@ namespace SixNimmt.Server.Repository
     {
         private readonly ILogger<GameRepository> _logger;
 
-        public GameRepository(ILogger<GameRepository> logger) : base("CREATE TABLE IF NOT EXISTS Games (Id text, GameJson text)")
+        public GameRepository(ILogger<GameRepository> logger) : base("CREATE TABLE IF NOT EXISTS Games (Id text, GameJson text, Private integer NOT NULL CHECK (Private IN (0,1)))")
         {
             _logger = logger;
         }
@@ -39,7 +39,7 @@ namespace SixNimmt.Server.Repository
         {
             try
             {
-                var command = new SQLiteCommand("INSERT INTO Games (Id, GameJson) VALUES(@Id, @Json)");
+                var command = new SQLiteCommand("INSERT INTO Games (Id, GameJson, Private) VALUES(@Id, @Json, @Private)");
                 command.AddParameter("@Id", game.Id);
                 command.AddParameter("@Json", game.Serialize());
                 command.AddParameter("@Private", privateGame ? 1 : 0);

@@ -30,7 +30,7 @@ namespace SixNimmt.Server.Controllers
             {
                 Id = new Guid(json.GetStringProperty("GameId")),
                 Name = json.GetStringProperty("GameName") ?? "Unnamed Game",
-                Players = new List<Player> { new Player { Name = "Host", IsHost = true, Hand = new List<Card>() } },
+                Players = new List<Player>(),
                 CreatedAtUtc = DateTime.UtcNow
             }, json.GetBooleanProperty("PrivateGame"));
         }
@@ -40,7 +40,9 @@ namespace SixNimmt.Server.Controllers
         {
             return _gameRepository.ModifyGame(gameIdJson.GetString(), game =>
             {
-                var player = new Player { Name = $"Player {game.Players.Count}", Hand = new List<Card>() };
+                var playerCount = game.Players.Count;
+                var isHost = playerCount == 0;
+                var player = new Player { Name = isHost ? "Host" : $"Guest {playerCount}", Hand = new List<Card>(), IsHost = isHost };
                 game.Players.Add(player);
                 return player;
             });
@@ -86,7 +88,17 @@ namespace SixNimmt.Server.Controllers
         [HttpGet("List")]
         public string List() => _gameRepository.ListGames(false).Serialize();
 
-        [HttpPost("StartGame")]
-        public void StartGame(JsonElement gameIdJson) => _gameRepository.ModifyGame(gameIdJson.GetString(), game => game.StartGame());
+        [HttpPost("Start")]
+        public void Start(JsonElement gameIdJson) => _gameRepository.ModifyGame(gameIdJson.GetString(), game => game.StartGame());
+
+        [HttpPost("RemovePlayer")]
+        public string RemovePlayer(JsonElement json)
+        {
+            return _gameRepository.ModifyGame(json.GetStringProperty("GameId"), game =>
+            {
+                game.Players.RemoveAt(game.Players.FindIndex(p => p.Name == json.GetStringProperty("KickedPlayerName")));
+                return game.Serialize();
+            });
+        }
     }
 }

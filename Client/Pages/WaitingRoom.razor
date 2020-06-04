@@ -1,18 +1,25 @@
 ﻿@page "/WaitingRoom/{GameId}"
 
 @inject IHttpService Http
-@inject GameHubCommunicator GameHub
 @inject GameStorage Storage
 @inject NavigationManager NavigationManager
+@inject GameHubCommunicator GameHub
 
 <h3>Waiting Room</h3>
 @if (_game == null)
 {
-    <p><em>Loading...</em></p>
+    if (_urlWrong)
+    {
+        <p>Sorry, it doesn't look like this is a valid game - please make sure your URL is correct and retry.</p>
+    }
+    else
+    {
+        <p><em>Loading...</em></p>
+    }
 }
 else if (_game.StartedAtUtc.HasValue)
 {
-    <p>Sorry, this game has been started by the host! <a href="" @onclick="HostNewGame">Click here to host a new game</a></p>
+    <p>Sorry, this game has been started by the host! <NavLink href="NewGame" Match="NavLinkMatch.All">Click here to host a new game</NavLink></p>
 }
 else
 {
@@ -23,20 +30,34 @@ else
                 <tr>
                     <th>#</th>
                     <th>Player Name</th>
+                    @if (_player.IsHost)
+                    {
+                        <th>Kick</th>
+                    }
                 </tr>
             </thead>
             <tbody>
                 @for (var i = 0; i < _game.Players.Count; i++)
                 {
+                    var playerName = _game.Players[i].Name;
                     <tr>
                         <td class="align-middle">@(i + 1)</td>
                         <td>
-                            <input class="form-control" type="text" value="@_game.Players[i].Name" disabled="@(_game.Players[i].Name != _player.Name)" @onchange="e => ChangeNameAsync(e.Value.ToString())" />
-                            @if (_newNameValidationMessage != null)
+                            <input class="form-control" type="text" value="@playerName" disabled="@(playerName != _player.Name)" @onchange="e => ChangeNameAsync(e.Value.ToString())" />
+                            @if (playerName == _player.Name && _newNameValidationMessage != null)
                             {
                                 <label class="text-danger ml-2">@_newNameValidationMessage</label>
                             }
                         </td>
+                        @if (_player.IsHost)
+                        {
+                            <td>
+                                @if (!_game.Players[i].IsHost)
+                                {
+                                    <button class="btn btn-danger ml-2" @onclick="() => KickPlayerAsync(playerName)">Kick</button>
+                                }
+                            </td>
+                        }
                     </tr>
                 }
             </tbody>
@@ -45,7 +66,7 @@ else
     <div class="row w-100 pl-3">
         @if (_player.IsHost)
         {
-            <button class="btn btn-success" disabled="@(_game.Players.Count < 2)" @onclick="StartGameAsync">Start Game</button>
+            <button class="btn btn-success" disabled="@(_game.Players.Count < 1)" @onclick="StartGameAsync">Start Game</button>
         }
         else
         {
@@ -61,6 +82,7 @@ else
     private Game _game;
     private Player _player;
     private string _newNameValidationMessage;
+    private bool _urlWrong;
 
     protected override async Task OnInitializedAsync()
     {
@@ -70,61 +92,75 @@ else
             Storage.PlayerName = null;
         }
 
-        await ConfigureHubAsync();
         _game = await Http.GetAsync<Game>($"api/Game/Get?id={GameId}");
-        if (_game == null)
-        {
-            await Http.PutAsync("api/Game/New", GameId);
-            _game = await Http.GetAsync<Game>($"api/Game/Get?id={GameId}");
-            _player = _game.Players.Single();
-        }
-        else if (_game.StartedAtUtc.HasValue)
-        {
-            return;
-        }
-        else
+        if (_game != null)
         {
             var playerName = Storage.PlayerName;
-            if (playerName == null)
+            if (_game.StartedAtUtc.HasValue)
             {
-                await JoinGameAsync();
+                if (playerName != null && _game.Players.SingleOrDefault(p => p.Name == playerName) != null)
+                {
+                    NavigationManager.NavigateTo($"PlayGame/{GameId}");
+                }
+                else
+                {
+                    return;
+                }
             }
             else
             {
-                _player = _game.Players.SingleOrDefault(p => p.Name == playerName);
-                if (_player == null)
+                await ConfigureHubAsync();
+                if (playerName == null)
                 {
-                    Storage.PlayerName = null;
                     await JoinGameAsync();
                 }
+                else
+                {
+                    _player = _game.Players.SingleOrDefault(p => p.Name == playerName);
+                    if (_player == null)
+                    {
+                        Storage.PlayerName = null;
+                        await JoinGameAsync();
+                    }
+                }
+
+                Storage.PlayerName = _player.Name;
             }
         }
-
-        Storage.PlayerName = _player.Name;
+        else
+        {
+            _urlWrong = true;
+        }
     }
 
     private async Task ConfigureHubAsync()
     {
-        GameHub.RegisterHandler<string>("UpdateGame", updatedGame =>
+        GameHub.RegisterHandler("UpdateGame", async () =>
         {
-            _game = updatedGame.Deserialize<Game>();
-            StateHasChanged();
+            _game = await Http.GetAsync<Game>($"api/Game/Get?id={GameId}");
+            if (_game.StartedAtUtc.HasValue)
+            {
+                NavigationManager.NavigateTo($"PlayGame/{GameId}");
+            }
+            else
+            {
+                if (!_game.Players.Any(p => p.Name == Storage.PlayerName))
+                {
+                    NavigationManager.NavigateTo("KickedByHost");
+                }
+                StateHasChanged();
+            }
         });
-        GameHub.RegisterHandler<string, string>("PlayerNameChanged", (oldName, newName) =>
-        {
-            _game.Players.Single(x => x.Name == oldName).Name = newName;
-            StateHasChanged();
-        });
-        GameHub.RegisterHandler("GameStarted", () => NavigationManager.NavigateTo($"PlayGame/{GameId}"));
+
         await GameHub.StartAsync();
-        await Task.WhenAll(GameHub.AddToGroupAsync(GameId), GameHub.NewGameAddedAsync());
+        await GameHub.AddToGroupAsync(GameId);
     }
 
     private async Task JoinGameAsync()
     {
         _player = await Http.PostAsync<Player>($"api/Game/Join", GameId);
         _game.Players.Add(_player);
-        await GameHub.UpdateGameAsync(GameId, _game.Serialize());
+        await GameHub.UpdateGameAsync(GameId);
     }
 
     private async Task ChangeNameAsync(string newName)
@@ -141,9 +177,8 @@ else
             }
             else
             {
-                await Task.WhenAll(
-                    Http.PostAsync("api/Game/UpdatePlayer", new { GameId = GameId, OldName = _player.Name, NewName = newName }),
-                    GameHub.UpdatePlayerNameAsync(GameId, _player.Name, newName));
+                await Http.PostAsync("api/Game/UpdatePlayerName", new { GameId = GameId, OldName = _player.Name, NewName = newName });
+                await GameHub.UpdateGameAsync(GameId);
                 _player.Name = newName;
                 Storage.PlayerName = _player.Name;
                 _newNameValidationMessage = null;
@@ -153,10 +188,14 @@ else
 
     private async Task StartGameAsync()
     {
-        await Http.PostAsync("api/Game/StartGame", GameId);
-        await GameHub.StartGameAsync(GameId);
+        await Http.PostAsync("api/Game/Start", GameId);
+        await GameHub.UpdateGameAsync(GameId);
         NavigationManager.NavigateTo($"PlayGame/{GameId}");
     }
 
-    private void HostNewGame() => NavigationManager.NavigateTo($"WaitingRoom/{Guid.NewGuid().ToString()}", true);
+    private async Task KickPlayerAsync(string playerName)
+    {
+        _game = await Http.PostAsync<Game>("api/Game/RemovePlayer", new { GameId = GameId, KickedPlayerName = playerName });
+        await GameHub.UpdateGameAsync(GameId);
+    }
 }
