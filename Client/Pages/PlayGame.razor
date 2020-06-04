@@ -23,10 +23,10 @@ else if (IdentifiedPlayer == null)
 }
 else
 {
-    <Modal Header="Game Over" Show="Game.Ended.HasValue" Closable="true">
+    <Modal Header="Game Over" Show="Game.EndedAtUtc.HasValue" Closable="true">
         @GetWinner()
     </Modal>
-    <Modal Header="Round Ended" Show="!Game.Ended.HasValue && Game.RoundEnded" Closable="false">
+    <Modal Header="Round Ended" Show="!Game.EndedAtUtc.HasValue && Game.RoundEnded" Closable="false">
         @if (IdentifiedPlayer.IsHost)
         {
             <div class="row">
@@ -137,7 +137,7 @@ else
         {
             _urlWrong = true;
         }
-        else if (!Game.Started.HasValue || Storage.GameId != GameId)
+        else if (!Game.StartedAtUtc.HasValue || Storage.GameId != GameId)
         {
             NavigationManager.NavigateTo($"/WaitingRoom/{GameId}");
         }
@@ -231,7 +231,7 @@ else
 
         if (Game.RoundEnded && Game.Players.Any(p => p.Points >= 66))
         {
-            Game.Ended = DateTime.UtcNow;
+            Game.EndedAtUtc = DateTime.UtcNow;
         }
 
         await UpdateGameAsync();
@@ -245,7 +245,7 @@ else
 
     private async Task EndGameAsync()
     {
-        Game.Ended = DateTime.UtcNow;
+        Game.EndedAtUtc = DateTime.UtcNow;
         await UpdateGameAsync();
     }
 

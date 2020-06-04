@@ -10,7 +10,7 @@
 {
     <p><em>Loading...</em></p>
 }
-else if (_game.Started.HasValue)
+else if (_game.StartedAtUtc.HasValue)
 {
     <p>Sorry, this game has been started by the host! <a href="" @onclick="HostNewGame">Click here to host a new game</a></p>
 }
@@ -78,7 +78,7 @@ else
             _game = await Http.GetAsync<Game>($"api/Game/Get?id={GameId}");
             _player = _game.Players.Single();
         }
-        else if (_game.Started.HasValue)
+        else if (_game.StartedAtUtc.HasValue)
         {
             return;
         }
@@ -117,7 +117,7 @@ else
         });
         GameHub.RegisterHandler("GameStarted", () => NavigationManager.NavigateTo($"PlayGame/{GameId}"));
         await GameHub.StartAsync();
-        await GameHub.AddToGroupAsync(GameId);
+        await Task.WhenAll(GameHub.AddToGroupAsync(GameId), GameHub.NewGameAddedAsync());
     }
 
     private async Task JoinGameAsync()

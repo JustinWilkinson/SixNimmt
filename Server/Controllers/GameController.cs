@@ -29,7 +29,9 @@ namespace SixNimmt.Server.Controllers
             _gameRepository.CreateGame(new Game
             {
                 Id = new Guid(gameId.GetString()),
-                Players = new List<Player> { new Player { Name = "Host", IsHost = true, Hand = new List<Card>() } }
+                Name = "Unnamed Game",
+                Players = new List<Player> { new Player { Name = "Host", IsHost = true, Hand = new List<Card>() } },
+                CreatedAtUtc = DateTime.UtcNow
             });
         }
 

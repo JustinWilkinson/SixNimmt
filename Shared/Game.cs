@@ -5,6 +5,8 @@ namespace SixNimmt.Shared
 {
     public class Game
     {
+        public string Name { get; set; }
+
         public Guid Id { get; set; }
 
         public List<Player> Players { get; set; }
@@ -17,9 +19,11 @@ namespace SixNimmt.Shared
 
         public bool RoundEnded { get; set; }
 
-        public DateTime? Started { get; set; }
+        public DateTime CreatedAtUtc { get; set; }
 
-        public DateTime? Ended { get; set; }
+        public DateTime? StartedAtUtc { get; set; }
+
+        public DateTime? EndedAtUtc { get; set; }
 
         public void StartRound(int rows = 4, int columns = 6)
         {
@@ -37,7 +41,7 @@ namespace SixNimmt.Shared
         public void StartGame(int rows = 4, int columns = 6)
         {
             StartRound(rows, columns);
-            Started = DateTime.UtcNow;
+            StartedAtUtc = DateTime.UtcNow;
         }
     }
 }
