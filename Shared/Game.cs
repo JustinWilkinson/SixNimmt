@@ -23,7 +23,7 @@ namespace SixNimmt.Shared
 
         public DateTime? StartedAtUtc { get; set; }
 
-        public DateTime? EndedAtUtc { get; set; }
+        public DateTime? CompletedAtUtc { get; set; }
 
         public void StartRound(int rows = 4, int columns = 6)
         {

@@ -23,10 +23,10 @@ else if (IdentifiedPlayer == null)
 }
 else
 {
-    <Modal Header="Game Over" Show="Game.EndedAtUtc.HasValue" Closable="true">
+    <Modal Header="Game Over" Show="Game.CompletedAtUtc.HasValue" Closable="true">
         @GetWinner()
     </Modal>
-    <Modal Header="Round Ended" Show="!Game.EndedAtUtc.HasValue && Game.RoundEnded" Closable="false">
+    <Modal Header="Round Ended" Show="!Game.CompletedAtUtc.HasValue && Game.RoundEnded" Closable="false">
         @if (IdentifiedPlayer.IsHost)
         {
             <div class="row">
@@ -231,7 +231,7 @@ else
 
         if (Game.RoundEnded && Game.Players.Any(p => p.Points >= 66))
         {
-            Game.EndedAtUtc = DateTime.UtcNow;
+            Game.CompletedAtUtc = DateTime.UtcNow;
         }
 
         await UpdateGameAsync();
@@ -245,7 +245,7 @@ else
 
     private async Task EndGameAsync()
     {
-        Game.EndedAtUtc = DateTime.UtcNow;
+        Game.CompletedAtUtc = DateTime.UtcNow;
         await UpdateGameAsync();
     }
 

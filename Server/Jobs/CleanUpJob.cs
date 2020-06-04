@@ -23,7 +23,7 @@ namespace SixNimmt.Server.Jobs
         {
             try
             {
-                var gameIdsToDelete = _gameRepository.ListGames().Where(x => x.EndedAtUtc.HasValue || !x.StartedAtUtc.HasValue || x.StartedAtUtc < DateTime.UtcNow.AddDays(-5)).Select(x => x.Id);
+                var gameIdsToDelete = _gameRepository.ListGames().Where(x => x.CompletedAtUtc.HasValue || x.CreatedAtUtc < DateTime.UtcNow.AddDays(-1) && !x.StartedAtUtc.HasValue || x.StartedAtUtc < DateTime.UtcNow.AddDays(-5)).Select(x => x.Id);
                 _gameRepository.DeleteGames(gameIdsToDelete);
             }
             catch (Exception ex)
