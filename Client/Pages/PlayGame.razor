@@ -251,7 +251,8 @@ else
 
     private async Task UpdateGameAsync()
     {
-        await Task.WhenAll(Http.PostAsync("api/Game/Save", Game.Serialize()), GameHub.UpdateGameAsync(GameId));
+        await Http.PostAsync("api/Game/Save", Game.Serialize());
+        await GameHub.UpdateGameAsync(GameId);
     }
 
     private string GetWinner()
