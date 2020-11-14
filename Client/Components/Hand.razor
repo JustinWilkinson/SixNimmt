@@ -49,6 +49,7 @@
     private async Task DropCard(Card card)
     {
         var newIndex = card != null ? IdentifiedPlayer.Hand.FindIndex(c => c.Value == card.Value) : IdentifiedPlayer.Hand.Count;
+
         Card draggedCard;
         if (_draggedCardIndex >= 0)
         {
@@ -67,21 +68,24 @@
 
     private async Task SelectCardAsync()
     {
-        if (IdentifiedPlayer.SelectedCard == null)
+        if (_draggedCardIndex >= 0)
         {
-            IdentifiedPlayer.SelectedCard = IdentifiedPlayer.Hand[_draggedCardIndex];
-            IdentifiedPlayer.Hand.RemoveAt(_draggedCardIndex);
-        }
-        else
-        {
-            var oldSelectedCard = IdentifiedPlayer.SelectedCard;
-            IdentifiedPlayer.SelectedCard = IdentifiedPlayer.Hand[_draggedCardIndex];
-            IdentifiedPlayer.Hand.RemoveAt(_draggedCardIndex);
-            AddToHand(_draggedCardIndex, oldSelectedCard);
-        }
+            if (IdentifiedPlayer.SelectedCard == null)
+            {
+                IdentifiedPlayer.SelectedCard = IdentifiedPlayer.Hand[_draggedCardIndex];
+                IdentifiedPlayer.Hand.RemoveAt(_draggedCardIndex);
+            }
+            else
+            {
+                var oldSelectedCard = IdentifiedPlayer.SelectedCard;
+                IdentifiedPlayer.SelectedCard = IdentifiedPlayer.Hand[_draggedCardIndex];
+                IdentifiedPlayer.Hand.RemoveAt(_draggedCardIndex);
+                AddToHand(_draggedCardIndex, oldSelectedCard);
+            }
 
-        Game.ShowHand = Game.Players.Any(p => p.SelectedCard == null);
-        await Parent.UpdateSelectedCardAsync();
+            Game.ShowHand = Game.Players.Any(p => p.SelectedCard == null);
+            await Parent.UpdateSelectedCardAsync();
+        }
     }
 
     private void AddToHand(int index, Card card)
