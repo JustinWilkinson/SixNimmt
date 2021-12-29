@@ -1,6 +1,6 @@
 ﻿namespace SixNimmt.Shared
 {
-    public class Coordinates
+    public record Coordinates
     {
         public double X { get; set; }
 

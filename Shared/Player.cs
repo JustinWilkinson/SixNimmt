@@ -2,7 +2,7 @@
 
 namespace SixNimmt.Shared
 {
-    public class Player
+    public record Player
     {
         public string Name { get; set; }
 

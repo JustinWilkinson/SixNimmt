@@ -1,6 +1,6 @@
 ﻿namespace SixNimmt.Shared
 {
-    public class Dimensions
+    public record Dimensions
     {
         public double Width { get; set; }
 

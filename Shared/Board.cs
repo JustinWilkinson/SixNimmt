@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace SixNimmt.Shared
 {
-    public class Board
+    public record Board
     {
         [JsonProperty]
         private Card[,] CardRows { get; set; }
