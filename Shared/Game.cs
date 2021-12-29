@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace SixNimmt.Shared
 {
-    public class Game
+    public record Game
     {
         public Guid Id { get; set; }
 

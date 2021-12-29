@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace SixNimmt.Shared
 {
-    public class Deck
+    public record Deck
     {
         private static readonly Random _random = new Random();
         private readonly List<Card> _cards = new List<Card>();
